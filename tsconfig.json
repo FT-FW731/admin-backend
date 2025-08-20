@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2020", // Or "ESNext" for very latest JS features
+    "module": "ESNext", // Or "ES2020", "NodeNext", depending on runtime
+    "moduleResolution": "Node", // "NodeNext" for fully native ESM in Node.js ≥16
+    "esModuleInterop": true, // Improves compatibility with CommonJS modules
+    "forceConsistentCasingInFileNames": true,
+    "strict": true, // Enables all strict type-checking options
+    "skipLibCheck": true, // Speeds up compilation, disables library type checking
+    "declaration": true, // Emit .d.ts files for libraries
+    "sourceMap": true, // Generates source maps for debugging
+    "outDir": "./dist", // Output directory
+    "resolveJsonModule": true, // Support importing .json files
+    "isolatedModules": true // Ensures each file can be transpiled independently (important for ESM)
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

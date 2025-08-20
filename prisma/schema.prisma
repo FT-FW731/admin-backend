@@ -1,0 +1,688 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../dist/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       Int     @id @default(autoincrement()) @db.UnsignedInt
+  name     String  @map("name") @db.VarChar(255)
+  password String  @map("password") @db.VarChar(255)
+  email    String  @unique(map: "email") @map("email") @db.VarChar(255)
+  company  String? @map("company") @db.VarChar(255)
+  mobile   String  @unique(map: "mobile") @map("mobile") @db.VarChar(255)
+  credits  Int     @default(0) @db.UnsignedInt
+
+  designation String? @map("designation") @db.VarChar(255)
+  website     String? @map("website") @db.VarChar(255)
+  state       String? @map("state") @db.VarChar(255)
+  apikey      String? @unique @map("api_key") @db.VarChar(255)
+  apisecret   String? @unique @map("api_secret") @db.VarChar(255)
+
+  createdAt         DateTime?           @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt         DateTime?           @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  Order             Order[]
+  SubscribedMonth   SubscribedMonth[]
+  PurchasedContacts PurchasedContacts[]
+  SubUser           SubUser[]
+
+  @@map("users")
+}
+
+model Otp {
+  id        Int       @id @default(autoincrement()) @db.UnsignedInt
+  email     String    @unique(map: "email") @map("email") @db.VarChar(255)
+  otp       String    @map("otp") @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at") @db.DateTime(0)
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([email], map: "idx_email")
+  @@map("otp_records")
+}
+
+model IecLead {
+  id           Int       @id @default(autoincrement()) @db.UnsignedInt
+  iecCode      String    @unique(map: "iec_code") @map("iec_code") @db.VarChar(20)
+  pan          String    @map("pan") @db.VarChar(10)
+  firmName     String    @map("firm_name") @db.VarChar(500)
+  email        String?   @map("email") @db.VarChar(100)
+  mobile       String?   @map("mobile") @db.VarChar(15)
+  status       String    @map("status") @db.VarChar(20)
+  issueDate    DateTime  @map("issue_date") @db.Date
+  fileNumber   String?   @map("file_number") @db.VarChar(50)
+  dgftRaOffice String?   @map("dgft_ra_office") @db.VarChar(100)
+  address      String?   @map("address") @db.Text
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([iecCode], map: "idx_iec_code")
+  @@index([pan], map: "idx_pan")
+  @@index([issueDate], map: "idx_issue_date")
+  @@index([status], map: "idx_status")
+  @@index([dgftRaOffice], map: "idx_dgft_office")
+  @@map("iec_leads")
+}
+
+// deprecated
+model McaLead {
+  id                      Int       @id @default(autoincrement()) @db.UnsignedInt
+  companyName             String    @map("company_name") @db.VarChar(500)
+  cin                     String?   @map("cin") @db.VarChar(30)
+  companyEmail            String?   @map("company_email") @db.VarChar(100)
+  registrationDate        DateTime  @map("registration_date") @db.Date
+  roc                     String?   @map("roc") @db.VarChar(100)
+  category                String?   @map("category") @db.VarChar(100)
+  class                   String?   @map("class") @db.VarChar(100)
+  subcategory             String?   @map("subcategory") @db.VarChar(100)
+  authorizedCapital       Decimal?  @map("authorized_capital") @db.Decimal(15, 2)
+  paidupCapital           Decimal?  @map("paidup_capital") @db.Decimal(15, 2)
+  activityDescription     String?   @map("activity_description") @db.Text
+  registeredOfficeAddress String?   @map("registered_office_address") @db.Text
+  companyType             String?   @map("company_type") @db.VarChar(50)
+  pincode                 String?   @map("pincode") @db.VarChar(10)
+  city                    String?   @map("city") @db.VarChar(100)
+  state                   String?   @map("state") @db.VarChar(100)
+  country                 String?   @default("India") @map("country") @db.VarChar(100)
+  din                     String    @map("din") @db.VarChar(20)
+  directorName            String    @map("director_name") @db.VarChar(200)
+  designation             String?   @map("designation") @db.VarChar(100)
+  dateOfBirth             DateTime? @map("date_of_birth") @db.Date
+  gender                  Gender?   @map("gender")
+  mobile                  String?   @map("mobile") @db.VarChar(15)
+  email                   String?   @map("email") @db.VarChar(100)
+  createdAt               DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt               DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([cin], map: "idx_cin")
+  @@index([companyName], map: "idx_company_name")
+  @@index([registrationDate], map: "idx_registration_date")
+  @@index([roc], map: "idx_roc")
+  @@index([state], map: "idx_state")
+  @@index([pincode], map: "idx_pincode")
+  @@index([din], map: "idx_din")
+  @@index([directorName], map: "idx_director_name")
+  @@index([designation], map: "idx_designation")
+  @@map("mca_leads")
+}
+
+model GstBasic {
+  id                   Int                 @id @default(autoincrement()) @db.UnsignedInt
+  gstin                String              @unique(map: "gstin") @db.VarChar(15)
+  registrationDate     DateTime            @map("registration_date") @db.Date
+  pan                  String              @db.VarChar(10)
+  mobile               String?             @db.VarChar(15)
+  email                String?             @db.VarChar(100)
+  legalName            String              @map("legal_name") @db.VarChar(500)
+  tradeName            String?             @map("trade_name") @db.VarChar(500)
+  businessConstitution String?             @map("business_constitution") @db.VarChar(100)
+  pincode              String?             @db.VarChar(10)
+  address              String?             @db.Text
+  createdAt            DateTime?           @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt            DateTime?           @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  businessNatures      GstBusinessNature[]
+  GstService           GstService[]
+
+  @@index([gstin], map: "idx_gstin")
+  @@index([pan], map: "idx_pan")
+  @@index([registrationDate], map: "idx_registration_date")
+  @@index([pincode], map: "idx_pincode")
+  @@map("gst_basics")
+}
+
+model GstBusinessNature {
+  id             Int       @id @default(autoincrement()) @db.UnsignedInt
+  gstin          String    @db.VarChar(15)
+  businessNature String    @map("business_nature") @db.VarChar(100)
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
+  gstBasic       GstBasic  @relation(fields: [gstin], references: [gstin], onDelete: Cascade, onUpdate: NoAction, map: "gst_business_nature_ibfk_1")
+
+  @@index([gstin, businessNature], map: "idx_gstin_nature")
+  @@map("gst_business_natures")
+}
+
+model Company {
+  id                                  Int                   @id @default(autoincrement()) @db.UnsignedInt
+  cin                                 String                @unique(map: "cin") @db.VarChar(21)
+  companyName                         String                @map("company_name") @db.VarChar(255)
+  companyType                         String?               @map("company_type") @db.VarChar(50)
+  companyOrigin                       String?               @map("company_origin") @db.VarChar(50)
+  registrationNumber                  String?               @map("registration_number") @db.VarChar(50)
+  dateOfIncorporation                 DateTime?             @map("date_of_incorporation") @db.Date
+  emailAddress                        String?               @map("email_address") @db.VarChar(255)
+  whetherListedOrNot                  String?               @map("whether_listed_or_not") @db.Char(1)
+  companyCategory                     String?               @map("company_category") @db.VarChar(100)
+  companySubcategory                  String?               @map("company_subcategory") @db.VarChar(100)
+  classOfCompany                      String?               @map("class_of_company") @db.VarChar(50)
+  authorisedCapital                   Decimal?              @map("authorised_capital") @db.Decimal(15, 2)
+  paidUpCapital                       Decimal?              @map("paid_up_capital") @db.Decimal(15, 2)
+  subscribedCapital                   Decimal?              @map("subscribed_capital") @db.Decimal(15, 2)
+  numberOfMembers                     Int?                  @map("number_of_members")
+  dateOfLastAgm                       DateTime?             @map("date_of_last_agm") @db.Date
+  strikeOffAmalgamatedTransferredDate DateTime?             @map("strike_off_amalgamated_transferred_date") @db.Date
+  llpStatus                           String?               @map("llp_status") @db.VarChar(50)
+  statusUnderCirp                     String?               @map("status_under_cirp") @db.VarChar(50)
+  numberOfPartners                    Int?                  @map("number_of_partners")
+  numberOfDesignatedPartners          Int?                  @map("number_of_designated_partners")
+  previousFirmCompanyDetails          String?               @map("previous_firm_company_details") @db.Text
+  totalObligationOfContribution       BigInt?               @map("total_obligation_of_contribution")
+  mainDivision                        String?               @map("main_division") @db.VarChar(100)
+  mainDivisionDescription             String?               @map("main_division_description") @db.Text
+  statementDate                       DateTime?             @map("statement_date") @db.Date
+  bsDefaulter2yrs                     String?               @map("bs_defaulter_2yrs") @db.VarChar(10)
+  bsDefaulter3yrs                     String?               @map("bs_defaulter_3yrs") @db.VarChar(10)
+  arDefaulter2yrs                     String?               @map("ar_defaulter_2yrs") @db.VarChar(10)
+  arDefaulter3yrs                     String?               @map("ar_defaulter_3yrs") @db.VarChar(10)
+  suspendedAtStockExchange            String?               @map("suspended_at_stock_exchange") @db.VarChar(10)
+  rocName                             String?               @map("roc_name") @db.VarChar(100)
+  shareCapitalFlag                    String?               @map("share_capital_flag") @db.Char(1)
+  maximumNumberOfMembers              Int?                  @map("maximum_number_of_members") @db.UnsignedInt
+  rdName                              String?               @map("rd_name") @db.VarChar(100)
+  rdRegion                            String?               @map("rd_region") @db.VarChar(100)
+  balanceSheetDate                    DateTime?             @map("balance_sheet_date") @db.Date
+  inc22aFlag                          String?               @map("inc22a_flag") @db.Char(1)
+  establishmentDate                   DateTime?             @map("establishment_date") @db.Date
+  createdAt                           DateTime?             @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt                           DateTime?             @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  annualReturns                       CompanyAnnualReturn[]
+  balanceSheets                       CompanyBalanceSheet[]
+  charges                             CompanyCharge[]
+  DirectorAddress                     DirectorAddress[]
+  directors                           Director[]
+  addresses                           McaCompanyAddress[]
+  userRoles                           McaUserRole[]
+
+  @@index([cin], map: "idx_cin")
+  @@index([companyName], map: "idx_company_name")
+  @@index([companyType], map: "idx_company_type")
+  @@map("companies")
+}
+
+model McaCompanyAddress {
+  id                Int       @id @default(autoincrement()) @db.UnsignedInt
+  cin               String    @db.VarChar(21)
+  streetAddress     String?   @map("street_address") @db.VarChar(255)
+  streetAddress2    String?   @map("street_address2") @db.VarChar(255)
+  streetAddress3    String?   @map("street_address3") @db.VarChar(255)
+  streetAddress4    String?   @map("street_address4") @db.VarChar(255)
+  addressType       String?   @map("address_type") @db.VarChar(50)
+  locality          String?   @map("locality") @db.VarChar(100)
+  district          String?   @map("district") @db.VarChar(100)
+  city              String?   @map("city") @db.VarChar(100)
+  state             String?   @map("state") @db.VarChar(100)
+  country           String?   @map("country") @db.VarChar(100)
+  postalCode        String?   @map("postal_code") @db.VarChar(20)
+  officeType        String?   @map("office_type") @db.VarChar(50)
+  activeStatus      String?   @map("active_status") @db.Char(1)
+  establishmentDate DateTime? @map("establishment_date") @db.Date
+  migrationFlag     String?   @map("migration_flag") @db.Char(1)
+  createdAt         DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt         DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  company           Company   @relation(fields: [cin], references: [cin], onDelete: Cascade, onUpdate: NoAction, map: "mca_company_addresses_ibfk_1")
+
+  @@index([cin, addressType], map: "idx_company_address")
+  @@map("mca_company_addresses")
+}
+
+model CompanyBalanceSheet {
+  id            Int       @id @default(autoincrement()) @db.UnsignedInt
+  cin           String    @db.VarChar(21)
+  dataOfFilling DateTime? @map("data_of_filling") @db.Date
+  financialYear String?   @map("financial_year") @db.VarChar(20)
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt     DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  company       Company   @relation(fields: [cin], references: [cin], onDelete: Cascade, onUpdate: NoAction, map: "company_balance_sheets_ibfk_1")
+
+  @@index([cin, financialYear], map: "idx_company_bs")
+  @@map("company_balance_sheets")
+}
+
+model CompanyAnnualReturn {
+  id            Int       @id @default(autoincrement()) @db.UnsignedInt
+  cin           String    @db.VarChar(21)
+  dataOfFilling DateTime? @map("data_of_filling") @db.Date
+  financialYear String?   @map("financial_year") @db.VarChar(20)
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt     DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  company       Company   @relation(fields: [cin], references: [cin], onDelete: Cascade, onUpdate: NoAction, map: "company_annual_returns_ibfk_1")
+
+  @@index([cin, financialYear], map: "idx_company_ar")
+  @@map("company_annual_returns")
+}
+
+model Director {
+  id                   Int               @id @default(autoincrement()) @db.UnsignedInt
+  cin                  String?           @db.VarChar(21)
+  din                  String            @unique(map: "din") @db.VarChar(20)
+  pan                  String?           @unique(map: "pan") @db.VarChar(20)
+  firstName            String            @map("first_name") @db.VarChar(100)
+  middleName           String?           @map("middle_name") @db.VarChar(100)
+  lastName             String?           @map("last_name") @db.VarChar(100)
+  directorDisqualified String?           @map("director_disqualified") @db.Char(1)
+  dateOfAppointment    DateTime?         @map("date_of_appointment") @db.Date
+  createdAt            DateTime?         @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt            DateTime?         @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  addresses            DirectorAddress[]
+  company              Company?          @relation(fields: [cin], references: [cin], onDelete: NoAction, onUpdate: NoAction, map: "directors_ibfk_1")
+  userRoles            McaUserRole[]
+
+  @@index([din], map: "idx_din")
+  @@index([pan], map: "idx_pan")
+  @@index([firstName, lastName], map: "idx_name")
+  @@index([cin], map: "cin")
+  @@map("directors")
+}
+
+model McaUserRole {
+  id                             Int       @id @default(autoincrement()) @db.UnsignedInt
+  cin                            String    @db.VarChar(21)
+  din                            String?   @db.VarChar(20)
+  userName                       String?   @map("user_name") @db.VarChar(100)
+  companyId                      String    @map("company_id") @db.VarChar(21)
+  firstName                      String?   @map("first_name") @db.VarChar(100)
+  middleName                     String?   @map("middle_name") @db.VarChar(100)
+  cessationDate                  DateTime? @map("cessation_date") @db.Date
+  educationalQualification       String?   @map("educational_qualification") @db.VarChar(255)
+  birthPlace                     String?   @map("birth_place") @db.VarChar(255)
+  drivingLicenseNumber           String?   @map("driving_license_number") @db.VarChar(50)
+  mobileNumber                   String?   @map("mobile_number") @db.VarChar(20)
+  directorDeathDate              DateTime? @map("director_death_date") @db.Date
+  fathersFirstName               String?   @map("fathers_first_name") @db.VarChar(100)
+  membershipNumber               String?   @map("membership_number") @db.VarChar(50)
+  roleLicValue                   String?   @map("role_lic_value") @db.VarChar(50)
+  contributionForm               String?   @map("contribution_form") @db.VarChar(50)
+  bodyCorpOutsideIndiaName       String?   @map("body_corp_outside_india_name") @db.VarChar(255)
+  profitSharingPercentage        Decimal?  @map("profit_sharing_percentage") @db.Decimal(10, 4)
+  nationality                    String?   @map("nationality") @db.VarChar(50)
+  gender                         String?   @map("gender") @db.VarChar(10)
+  roleEffectiveDate              DateTime? @map("role_effective_date") @db.DateTime(0)
+  occupationType                 String?   @map("occupation_type") @db.VarChar(100)
+  bodyCorporateType              String?   @map("body_corporate_type") @db.VarChar(50)
+  idDisqualified                 String?   @map("id_disqualified") @db.Char(1)
+  ucin                           String?   @map("ucin") @db.VarChar(21)
+  role                           String?   @map("role") @db.VarChar(50)
+  bodyCorpInsideIndiaName        String?   @map("body_corp_inside_india_name") @db.VarChar(255)
+  kmpFlag                        String?   @map("kmp_flag") @db.Char(1)
+  othersEducationalQualification String?   @map("others_educational_qualification") @db.VarChar(255)
+  companyName                    String?   @map("company_name") @db.VarChar(255)
+  opcFlag                        String?   @map("opc_flag") @db.Char(1)
+  fathersLastName                String?   @map("fathers_last_name") @db.VarChar(100)
+  dob                            DateTime? @map("dob") @db.Date
+  approverId                     String?   @map("approver_id") @db.VarChar(50)
+  fathersMiddleName              String?   @map("fathers_middle_name") @db.VarChar(100)
+  pan                            String?   @map("pan") @db.VarChar(20)
+  monetaryContributionValue      Decimal?  @map("monetary_contribution_value") @db.Decimal(15, 2)
+  oidFlag                        String?   @map("oid_flag") @db.Char(1)
+  authorizationStatus            String?   @map("authorization_status") @db.VarChar(50)
+  passportNumber                 String?   @map("passport_number") @db.VarChar(50)
+  residentOfIndia                String?   @map("resident_of_india") @db.Char(1)
+  userId                         String?   @map("user_id") @db.VarChar(50)
+  directorFlag                   String?   @map("director_flag") @db.Char(1)
+  emailAddress                   String?   @map("email_address") @db.VarChar(100)
+  shareholdingPercentage         Decimal?  @map("shareholding_percentage") @db.Decimal(10, 4)
+  personType                     String?   @map("person_type") @db.VarChar(20)
+  areaOfOccupation               String?   @map("area_of_occupation") @db.VarChar(100)
+  lastName                       String?   @map("last_name") @db.VarChar(100)
+  citizenOfIndia                 String?   @map("citizen_of_india") @db.Char(1)
+  occupation                     String?   @map("occupation") @db.VarChar(100)
+  opcType                        String?   @map("opc_type") @db.VarChar(50)
+  otherOccupation                String?   @map("other_occupation") @db.VarChar(100)
+  designation                    String?   @map("designation") @db.VarChar(100)
+  signatoryAssociationStatus     String?   @map("signatory_association_status") @db.VarChar(20)
+  currentDesignationDate         DateTime? @map("current_designation_date") @db.DateTime(0)
+  directorCategory               String?   @map("director_category") @db.VarChar(50)
+  createdAt                      DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt                      DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  company                        Company   @relation(fields: [cin], references: [cin], onDelete: NoAction, onUpdate: NoAction, map: "mca_user_roles_ibfk_1")
+  director                       Director? @relation(fields: [din], references: [din], onDelete: NoAction, onUpdate: NoAction, map: "mca_user_roles_ibfk_2")
+
+  @@index([cin, din], map: "idx_company_director")
+  @@index([din], map: "din")
+  @@map("mca_user_roles")
+}
+
+model DirectorAddress {
+  id             Int       @id @default(autoincrement()) @db.UnsignedInt
+  cin            String    @db.VarChar(21)
+  din            String    @db.VarChar(20)
+  state          String?   @map("state") @db.VarChar(100)
+  postalCode     String?   @map("postal_code") @db.VarChar(20)
+  streetAddress2 String?   @map("street_address2") @db.VarChar(255)
+  country        String?   @map("country") @db.VarChar(100)
+  district       String?   @map("district") @db.VarChar(100)
+  streetAddress  String?   @map("street_address") @db.VarChar(255)
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt      DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  company        Company   @relation(fields: [cin], references: [cin], onDelete: NoAction, onUpdate: NoAction, map: "director_addresses_ibfk_1")
+  director       Director  @relation(fields: [din], references: [din], onDelete: NoAction, onUpdate: NoAction, map: "director_addresses_ibfk_2")
+
+  @@index([cin, din], map: "idx_director_address")
+  @@index([din], map: "din")
+  @@map("director_addresses")
+}
+
+model CompanyCharge {
+  id                    Int       @id @default(autoincrement()) @db.UnsignedInt
+  cin                   String    @db.VarChar(21)
+  srn                   String?   @map("srn") @db.VarChar(50)
+  chargeId              String?   @map("charge_id") @db.VarChar(50)
+  chargeHolderName      String?   @map("charge_holder_name") @db.VarChar(255)
+  dateOfCreation        DateTime? @map("date_of_creation") @db.Date
+  dateOfModification    DateTime? @map("date_of_modification") @db.Date
+  dateOfSatisfaction    DateTime? @map("date_of_satisfaction") @db.Date
+  amount                Decimal?  @map("amount") @db.Decimal(15, 2)
+  streetAddress         String?   @map("street_address") @db.VarChar(255)
+  streetAddress2        String?   @map("street_address2") @db.VarChar(255)
+  streetAddress3        String?   @map("street_address3") @db.VarChar(255)
+  streetAddress4        String?   @map("street_address4") @db.VarChar(255)
+  country               String?   @map("country") @db.VarChar(100)
+  locality              String?   @map("locality") @db.VarChar(100)
+  state                 String?   @map("state") @db.VarChar(100)
+  district              String?   @map("district") @db.VarChar(100)
+  city                  String?   @map("city") @db.VarChar(100)
+  postalCode            String?   @map("postal_code") @db.VarChar(20)
+  registeredName        String?   @map("registered_name") @db.VarChar(255)
+  propertyIntUnRegdFlag String?   @map("property_int_un_regd_flag") @db.Char(1)
+  chName                String?   @map("ch_name") @db.VarChar(255)
+  chargeStatus          String?   @map("charge_status") @db.VarChar(20)
+  createdAt             DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt             DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  company               Company   @relation(fields: [cin], references: [cin], onDelete: Cascade, onUpdate: NoAction, map: "company_charges_ibfk_1")
+
+  @@index([cin], map: "idx_company_charges")
+  @@index([chargeStatus], map: "idx_charge_status")
+  @@index([chargeHolderName], map: "idx_charge_holder")
+  @@index([dateOfCreation], map: "idx_creation_date")
+  @@map("company_charges")
+}
+
+model GstAdvance {
+  id                   Int          @id @default(autoincrement()) @db.UnsignedInt
+  gstin                String       @db.VarChar(15)
+  registrationDate     DateTime     @map("registration_date") @db.Date
+  legalName            String       @map("legal_name") @db.VarChar(500)
+  tradeName            String?      @map("trade_name") @db.VarChar(500)
+  businessConstitution String?      @map("business_constitution") @db.VarChar(100)
+  businessNature       String?      @map("business_nature") @db.Text
+  taxpayerType         String?      @map("taxpayer_type") @db.VarChar(100)
+  status               String?      @default("Active") @db.VarChar(20)
+  aadharStatus         String?      @map("aadhar_status") @db.VarChar(20)
+  aadharVerifyDate     DateTime?    @map("aadhar_verify_date") @db.Date
+  kycStatus            String?      @map("kyc_status") @db.VarChar(50)
+  address              String?      @db.Text
+  addressData          String?      @map("address_data") @db.Text
+  aggreTurnover        String?      @map("aggre_turnover") @db.VarChar(100)
+  aggreTurnoverFy      String?      @map("aggre_turnover_fy") @db.VarChar(20)
+  gstStatus            String?      @map("gst_status") @db.VarChar(20)
+  services             GstService[]
+  createdAt            DateTime?    @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt            DateTime?    @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([gstin], map: "idx_adv_gstin")
+  @@map("gst_advances")
+}
+
+model GstService {
+  id                 Int      @id @default(autoincrement()) @db.UnsignedInt
+  gstin              String   @db.VarChar(15)
+  serviceDescription String   @map("service_description") @db.Text
+  sacCode            String   @map("sac_code") @db.VarChar(10)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  gstBasic     GstBasic    @relation(fields: [gstin], references: [gstin], onDelete: Cascade, onUpdate: Cascade)
+  GstAdvance   GstAdvance? @relation(fields: [gstAdvanceId], references: [id])
+  gstAdvanceId Int?        @db.UnsignedInt
+
+  @@index([gstin], map: "idx_services_gstin")
+  @@index([sacCode], map: "idx_services_sac")
+  @@index([gstin, sacCode], map: "idx_services_gstin_sac")
+  @@map("gst_services")
+}
+
+model Subscription {
+  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  name        String   @db.VarChar(50)
+  type        String   @db.VarChar(50)
+  filterType  String?  @db.VarChar(50)
+  price       Int      @db.UnsignedInt
+  credits     Int      @db.UnsignedInt
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  Order       Order[]
+
+  @@index([name], map: "idx_subscription_name")
+  @@map("subscriptions")
+}
+
+model Order {
+  id              Int               @id @default(autoincrement()) @db.UnsignedInt
+  razorpayOrderId String            @unique @map("razorpay_order_id") @db.VarChar(255)
+  amount          Int               @db.UnsignedInt
+  userId          Int               @db.UnsignedInt
+  subscriptionId  Int               @db.UnsignedInt
+  unit            Int               @db.UnsignedInt
+  values          String            @db.VarChar(255)
+  status          String            @default("created")
+  startDate       DateTime?         @map("start_date") @db.Date
+  endDate         DateTime?         @map("end_date") @db.Date
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamp(0)
+  user            User              @relation(fields: [userId], references: [id])
+  subscription    Subscription      @relation(fields: [subscriptionId], references: [id])
+  payment         Payment[]
+  SubscribedMonth SubscribedMonth[]
+
+  @@index([userId], map: "idx_order_user_id")
+  @@map("razorpay_orders")
+}
+
+model Payment {
+  id                Int      @id @default(autoincrement()) @db.UnsignedInt
+  razorpayOrderId   String   @map("razorpay_order_id") @db.VarChar(255)
+  razorpayPaymentId String   @unique @map("razorpay_payment_id") @db.VarChar(255)
+  razorpaySignature String   @map("razorpay_signature") @db.VarChar(255)
+  amount            Int      @db.UnsignedInt
+  status            String   @default("success")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+  order             Order?   @relation(fields: [razorpayOrderId], references: [razorpayOrderId])
+
+  @@index([razorpayOrderId], map: "idx_payment_order_id")
+  @@map("razorpay_payments")
+}
+
+model McaNewLeads {
+  id Int @id @default(autoincrement())
+
+  // Company Details (keeping essential ones required)
+  company                 String
+  cin                     String?
+  cEmail                  String?   @map("company_email")
+  dateOfRegistration      DateTime? @map("date_of_registration")
+  roc                     String?
+  category                String?
+  class                   String?
+  subcategory             String?
+  authorizedCapital       String?   @map("authorized_capital")
+  paidupCapital           String?   @map("paidup_capital")
+  activityDescription     String?   @map("activity_description")
+  dateJoin                DateTime? @map("date_join")
+  registeredOfficeAddress String?   @map("registered_office_address")
+  typeCompany             String?   @map("type_company")
+
+  // Director Details (keeping essential ones required)
+  din          String?
+  directorName String?   @map("director_name")
+  designation  String?
+  dateOfBirth  DateTime? @map("date_of_birth")
+  mobile       String?
+  email        String?
+  gender       String?
+  pincode      String?
+  city         String?
+  state        String?
+  country      String?
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Indexes for better query performance
+  @@index([company])
+  @@index([cin])
+  @@index([din])
+  @@index([directorName])
+  @@index([dateOfRegistration])
+  @@map("mca_new_leads")
+}
+
+model SubscribedMonth {
+  id      Int       @id @default(autoincrement()) @db.UnsignedInt
+  userId  Int       @db.UnsignedInt
+  orderId Int       @db.UnsignedInt
+  date    DateTime
+  endDate DateTime?
+  type    String? // if you need to store additional info
+  user    User      @relation(fields: [userId], references: [id])
+  order   Order     @relation(fields: [orderId], references: [id])
+
+  @@index([userId], map: "idx_subscribed_month_user_id")
+  @@index([orderId], map: "idx_subscribed_month_order_id")
+  @@map("subscribed_months")
+}
+
+model PurchasedContacts {
+  id     Int @id @default(autoincrement()) @db.UnsignedInt
+  userId Int @db.UnsignedInt
+
+  gstin Json?
+  din   Json?
+  iec   Json?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "idx_userId")
+  @@map("purchased_contacts")
+}
+
+model DinDataContact {
+  id        String   @id @map("_id")
+  status    Boolean
+  createdAt DateTime @map("created_at")
+  updatedAt DateTime
+
+  // Data fields
+  addCorrregofc      String?
+  adhaar             String?
+  amountSecured      String?
+  amountSecuredWords String?
+  areaOfoccu         String?
+  artentRenched      String?
+  authorizedCapital  String?
+  categoryCompany    String?
+  cityOne            String?
+  classCompany       String?
+  cntryCode          String?
+  companyAddress     String?
+  companyOrg1        String?
+  companyType        String?
+  country            String?
+  crDat              String? @db.VarChar(50)
+  creationDate       String? @db.VarChar(50)
+  dateOfBirth        String? @db.VarChar(50)
+  descriptionOne     String?
+  durationMonth      String?
+  durationYear       String?
+  educationQual      String?
+  email              String?
+  familyName         String?
+  fatherFirstName    String?
+  fatherLastName     String?
+  fatherMiddleName   String?
+  fatherName         String?
+  firstName          String?
+  flag               String?
+  flagOne            String?
+  flagTwo            String?
+  havingShareCapital String?
+  houseNum           String?
+  iso                String?
+  middleName         String?
+  modifyDate         String? @db.VarChar(50)
+  nameChrgHolder     String?
+  nameL              String?
+  nameOrgOne         String?
+  namePerson         String?
+  nameROC            String?
+  nationality        String?
+  nomidProof         String?
+  nomresProof        String?
+  paFax              String?
+  paPhone            String?
+  paState            String?
+  paddressLineOne    String?
+  paddressLineTwo    String?
+  pan                String?
+  passport           String?
+  permanantAdd       String?
+  personName         String?
+  placeOfBirth       String?
+  postCodeOne        String?
+  presentAdd         String?
+  presentAddCity     String?
+  presentAddCountry  String?
+  presentAddFax      String?
+  presentAddLineOne  String?
+  presentAddLineTwo  String?
+  presentAddPhone    String?
+  presentAddPincode  String?
+  presentAddState    String?
+  rbAddress          String?
+  rbFatherName       String?
+  rbGender           String?
+  region             String?
+  residentialAddr    String?
+  rigistarOffice     String?
+  satisfyDate        String? @db.VarChar(50)
+  state1             String?
+  statePropComp      String?
+  street             String?
+  stringOut1         String?
+  subCatCompany      String?
+  surName            String?
+  typeCompany        String?
+  voteridCrd         String?
+  pMobile            String?
+
+  @@map("din_data_contact")
+}
+
+model SubUser {
+  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  userId      Int      @db.UnsignedInt
+  user        User     @relation(fields: [userId], references: [id])
+  name        String
+  email       String   @unique
+  password    String
+  accessLevel Json?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+}
+
+enum Gender {
+  Male
+  Female
+  Other
+}
