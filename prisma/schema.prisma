@@ -52,19 +52,26 @@ model Otp {
 }
 
 model IecLead {
-  id           Int       @id @default(autoincrement()) @db.UnsignedInt
-  iecCode      String    @unique(map: "iec_code") @map("iec_code") @db.VarChar(20)
-  pan          String    @map("pan") @db.VarChar(10)
-  firmName     String    @map("firm_name") @db.VarChar(500)
-  email        String?   @map("email") @db.VarChar(100)
-  mobile       String?   @map("mobile") @db.VarChar(15)
-  status       String    @map("status") @db.VarChar(20)
-  issueDate    DateTime  @map("issue_date") @db.Date
-  fileNumber   String?   @map("file_number") @db.VarChar(50)
-  dgftRaOffice String?   @map("dgft_ra_office") @db.VarChar(100)
-  address      String?   @map("address") @db.Text
-  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
-  updatedAt    DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  id            Int       @id @default(autoincrement()) @db.UnsignedInt
+  iecCode       String    @unique(map: "iec_code") @map("iec_code") @db.VarChar(20)
+  pan           String    @map("pan") @db.VarChar(10)
+  firmName      String?   @map("firm_name") @db.VarChar(500)
+  email         String?   @map("email") @db.VarChar(100)
+  mobile        String?   @map("mobile") @db.VarChar(15)
+  status        String?   @map("status") @db.VarChar(20)
+  issueDate     DateTime? @map("issue_date") @db.Date
+  fileNumber    String?   @map("file_number") @db.VarChar(50)
+  dgftRaOffice  String?   @map("dgft_ra_office") @db.VarChar(100)
+  address       String?   @map("address") @db.Text
+  dob           DateTime? @map("dob") @db.Date
+  cancelledDate DateTime? @map("cancelled_date") @db.Date
+  suspendedDate DateTime? @map("suspended_date") @db.Date
+  fileDate      DateTime? @map("file_date") @db.Date
+  nature        String?   @map("nature") @db.VarChar(100)
+  category      String?   @map("category") @db.VarChar(100)
+  pincode       String?   @map("pincode") @db.VarChar(10)
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt     DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
 
   @@index([iecCode], map: "idx_iec_code")
   @@index([pan], map: "idx_pan")
@@ -496,7 +503,7 @@ model Payment {
   amount            Int      @db.UnsignedInt
   status            String   @default("success")
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamp(0)
-  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
   order             Order?   @relation(fields: [razorpayOrderId], references: [razorpayOrderId])
 
   @@index([razorpayOrderId], map: "idx_payment_order_id")
@@ -517,6 +524,7 @@ model McaNewLeads {
   subcategory             String?
   authorizedCapital       String?   @map("authorized_capital")
   paidupCapital           String?   @map("paidup_capital")
+  activityCode            String?   @map("activity_code")
   activityDescription     String?   @map("activity_description")
   dateJoin                DateTime? @map("date_join")
   registeredOfficeAddress String?   @map("registered_office_address")
@@ -679,6 +687,18 @@ model SubUser {
   accessLevel Json?
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+}
+
+model AdminUser {
+  id        Int      @id @default(autoincrement()) @db.UnsignedInt
+  name      String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(100)
+  password  String   @db.VarChar(255)
+  role      String   @default("admin") @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("admin_users")
 }
 
 enum Gender {

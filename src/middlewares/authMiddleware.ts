@@ -4,12 +4,12 @@ import prisma from "../db/index.js";
 import config from "../config/index.js";
 import { ApiError } from "./errorHandler.js";
 import { StatusCodes } from "http-status-codes";
-import { UserResponseDTO } from "../models/user.dto.js";
+import { AdminUserResponseDTO } from "../models/user.dto.js";
 
 declare global {
   namespace Express {
     interface Request {
-      user?: UserResponseDTO;
+      user?: AdminUserResponseDTO;
     }
   }
 }
@@ -56,32 +56,34 @@ function verifyJwtToken(token: string): jwt.JwtPayload {
 }
 
 /**
- * Fetches the user from the database by user ID.
- * @param userId User's ID
- * @returns UserResponseDTO object containing user data
- * @throws ApiError if the user is not found
+ * Fetches the admin user from the database by user ID.
+ * @param userId Admin user's ID
+ * @returns AdminUserResponseDTO object containing admin user data
+ * @throws ApiError if the admin user is not found
  */
-async function fetchUser(userId: number): Promise<UserResponseDTO> {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) {
+async function fetchAdminUser(userId: number): Promise<AdminUserResponseDTO> {
+  const adminUser = await prisma.adminUser.findUnique({
+    where: { id: userId },
+  });
+  if (!adminUser) {
     throw new ApiError({
       status: StatusCodes.UNAUTHORIZED,
       message: "User not found",
     });
   }
 
-  const { id, name, email, company, mobile, createdAt, updatedAt } = user;
-  return { id, name, email, company, mobile, createdAt, updatedAt };
+  const { id, name, email, role, createdAt, updatedAt } = adminUser;
+  return { id, name, email, role, createdAt, updatedAt };
 }
 
 /**
  * Express middleware to authenticate requests using JWT.
- * Attaches the authenticated user to req.user if successful.
+ * Attaches the authenticated admin user to req.user if successful.
  * @param req Express request object
  * @param res Express response object
  * @param next Express next middleware function
  */
-export const authMiddleware = async (
+export const authProtect = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -97,7 +99,7 @@ export const authMiddleware = async (
       });
     }
 
-    const user = await fetchUser(userId);
+    const user = await fetchAdminUser(userId);
     req.user = user;
     next();
   } catch (error) {
