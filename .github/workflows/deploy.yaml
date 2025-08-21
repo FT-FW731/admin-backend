@@ -1,0 +1,47 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: SSH into Server & Deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            cd admin-backend
+            git pull origin main
+
+            # Cleanup any existing backup service first
+            docker compose stop ff-admin-backend-backup || true
+            docker compose rm -f ff-admin-backend-backup || true
+
+            # Start backup
+            docker compose up -d --build ff-admin-backend-backup
+            sleep 10
+
+            # Wait for backup to be healthy
+            curl -f -s http://localhost:4420/health || exit
+
+            # Cleanup any existing primary service before deploying
+            docker compose stop ff-admin-backend || true
+            docker compose rm -f ff-admin-backend || true
+
+            # Deploy new version
+            docker compose up -d --build ff-admin-backend
+            sleep 10
+
+            # Cleanup backup
+            docker compose stop ff-admin-backend-backup
+            docker compose rm -f ff-admin-backend-backup

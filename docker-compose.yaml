@@ -1,0 +1,33 @@
+services:
+  ff-admin-backend:
+    image: fact-flow-admin-backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ff-admin-backend
+    restart: unless-stopped
+    ports:
+      - "4410:4000"
+    env_file:
+      - .env
+    networks:
+      - ff-network
+
+  ff-admin-backend-backup:
+    image: fact-flow-admin-backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ff-admin-backend-backup
+    ports:
+      - "4420:4000"
+    env_file:
+      - .env
+    networks:
+      - ff-network
+
+networks:
+  ff-network:
+    name: ff-network
+    external: true
+    driver: bridge
