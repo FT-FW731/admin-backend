@@ -51,9 +51,10 @@ export const uploadRecords = asyncHandler(async (req, res) => {
       status: StatusCodes.OK,
       message: "File uploaded and data inserted successfully",
       data: {
-        fileName: file.filename,
+        fileName: file.originalname,
         totalRecords: records.length,
         insertedRecords: insertedCount,
+        failedRecords: records.length - insertedCount,
       },
     });
   } catch (error: Error | any) {

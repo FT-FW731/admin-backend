@@ -55,11 +55,11 @@ model IecLead {
   id            Int       @id @default(autoincrement()) @db.UnsignedInt
   iecCode       String    @unique(map: "iec_code") @map("iec_code") @db.VarChar(20)
   pan           String    @map("pan") @db.VarChar(10)
-  firmName      String    @map("firm_name") @db.VarChar(500)
+  firmName      String?   @map("firm_name") @db.VarChar(500)
   email         String?   @map("email") @db.VarChar(100)
   mobile        String?   @map("mobile") @db.VarChar(15)
-  status        String    @map("status") @db.VarChar(20)
-  issueDate     DateTime  @map("issue_date") @db.Date
+  status        String?   @map("status") @db.VarChar(20)
+  issueDate     DateTime? @map("issue_date") @db.Date
   fileNumber    String?   @map("file_number") @db.VarChar(50)
   dgftRaOffice  String?   @map("dgft_ra_office") @db.VarChar(100)
   address       String?   @map("address") @db.Text
@@ -531,7 +531,7 @@ model McaNewLeads {
   typeCompany             String?   @map("type_company")
 
   // Director Details (keeping essential ones required)
-  din          String?
+  din          String?   @unique
   directorName String?   @map("director_name")
   designation  String?
   dateOfBirth  DateTime? @map("date_of_birth")
