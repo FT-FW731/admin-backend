@@ -15,6 +15,7 @@ router.post("/signup", createAdminUser);
 router.post("/login", signInAdminUser);
 router.get("/me", authProtect, getAdminUser);
 router.get("/users", authProtect, getAllAdminUsers);
+
 router.put("/users/:id", authProtect, updateAdminUser);
 router.delete("/users/:id", authProtect, deleteAdminUser);
 
