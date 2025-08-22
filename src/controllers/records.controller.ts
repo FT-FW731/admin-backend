@@ -11,14 +11,14 @@ import { asyncHandler } from "../middlewares/asyncHandler.js";
 import {
   parseRecordsFromFile,
   processAndInsertRecordsByType,
+  RECORD_TYPES,
 } from "../services/records.service.js";
 
 export const uploadRecords = asyncHandler(async (req, res) => {
   const { type } = req.body;
   validateRequiredFields({ type });
 
-  const recordType = ["gst", "mca", "iec"];
-  if (!recordType.includes(type)) {
+  if (!RECORD_TYPES.includes(type)) {
     throw new ApiError({
       status: StatusCodes.BAD_REQUEST,
       message: "Invalid record type",

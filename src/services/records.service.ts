@@ -3,6 +3,9 @@ import XLSX from "xlsx";
 import moment from "moment";
 import prisma from "../db/index.js";
 
+export const RECORD_TYPES = ["mca", "iec", "gst"] as const;
+export type RecordType = (typeof RECORD_TYPES)[number];
+
 // Parse records from uploaded file (xlsx, xls, csv)
 export async function parseRecordsFromFile(
   file: Express.Multer.File
@@ -56,7 +59,7 @@ function parseDate(dateStr: string | number | undefined): Date | undefined {
 export function transformMcaRecords(records: any[]): any[] {
   return records.map((record) => ({
     company: record.Company || "",
-    cin: record.CIN || null,
+    cin: record.CIN,
     cEmail: record.CEmail || null,
     dateOfRegistration: parseDate(record["DATE OF REGISTRATION"]),
     roc: record.ROC || null,
@@ -86,7 +89,7 @@ export function transformMcaRecords(records: any[]): any[] {
 
 export function transformIecRecords(records: any[]): any[] {
   return records.map((record) => ({
-    iecCode: record.IEC ?? null,
+    iecCode: record.IEC,
     pan: record.PAN ?? null,
     firmName: record["FIRM NAME"] ?? null,
     email: record.EMAIL?.toString() ?? null,
@@ -108,7 +111,7 @@ export function transformIecRecords(records: any[]): any[] {
 
 export function transformGstBasicRecords(records: any[]): any[] {
   return records.map((record) => ({
-    gstin: record.GSTIN?.toString() ?? null,
+    gstin: record.GSTIN?.toString(),
     registrationDate: parseDate(record["Registration Date"]) ?? null,
     pan: record.PAN?.toString() ?? null,
     mobile: record.Mobile?.toString() ?? null,
@@ -121,52 +124,73 @@ export function transformGstBasicRecords(records: any[]): any[] {
   }));
 }
 
+// Map record types to their transform functions
+const transformMap: Record<RecordType, (records: any[]) => any[]> = {
+  mca: transformMcaRecords,
+  iec: transformIecRecords,
+  gst: transformGstBasicRecords,
+};
+
+// Map record types to their prisma models
+const prismaModelMap: Record<RecordType, any> = {
+  mca: prisma.mcaNewLeads,
+  iec: prisma.iecLead,
+  gst: prisma.gstBasic,
+};
+
+// Mandatory fields mapping for each record type
+const mandatoryFieldsMap: Record<RecordType, string[]> = {
+  mca: ["CIN"],
+  iec: ["IEC"],
+  gst: ["GSTIN"],
+};
+
+// Generic validator function
+function validateRecordsByType(type: RecordType, records: any[]): any[] {
+  const mandatoryFields = mandatoryFieldsMap[type];
+  return records.filter((record) =>
+    mandatoryFields.every(
+      (field) =>
+        record[field] !== undefined &&
+        record[field] !== null &&
+        record[field] !== ""
+    )
+  );
+}
+
+// Map record types to their validator functions
+const validatorMap: Record<RecordType, (records: any[]) => any[]> = {
+  mca: (records) => validateRecordsByType("mca", records),
+  iec: (records) => validateRecordsByType("iec", records),
+  gst: (records) => validateRecordsByType("gst", records),
+};
+
 // Insert records by type (mca, iec, gst)
 export async function insertRecordsByType(
-  type: "mca" | "iec" | "gst",
+  type: RecordType,
   records: any[]
 ): Promise<number> {
-  if (type === "mca") {
-    const result = await prisma.mcaNewLeads.createMany({
-      data: records,
-      skipDuplicates: true,
-    });
-    return result.count;
-  } else if (type === "iec") {
-    const result = await prisma.iecLead.createMany({
-      data: records,
-      skipDuplicates: true,
-    });
-    return result.count;
-  } else if (type === "gst") {
-    const result = await prisma.gstBasic.createMany({
-      data: records,
-      skipDuplicates: true,
-    });
-    return result.count;
-  }
-  // TODO: Add logic for GST when their models and transforms are ready
-  throw new Error("Unsupported record type");
+  const model = prismaModelMap[type];
+  if (!model) throw new Error("Unsupported record type");
+  const result = await model.createMany({
+    data: records,
+    skipDuplicates: true,
+  });
+  return result.count;
 }
 
-// Process and insert records by type (transform + insert)
+// Process and insert records by type (validate + transform + insert)
 export async function processAndInsertRecordsByType(
-  type: "mca" | "iec" | "gst",
+  type: RecordType,
   records: any[]
 ): Promise<number> {
-  let transformed: any[];
-  if (type === "mca") {
-    transformed = transformMcaRecords(records);
-  } else if (type === "iec") {
-    transformed = transformIecRecords(records);
-  } else if (type === "gst") {
-    transformed = transformGstBasicRecords(records);
-  }
-  // TODO: Add IEC/GST transforms when ready
-  else {
-    throw new Error("Unsupported record type");
-  }
+  const validatorFn = validatorMap[type];
+  const transformFn = transformMap[type];
+  if (!validatorFn || !transformFn) throw new Error("Unsupported record type");
+  // Filter records by mandatory fields
+  const validRecords = validatorFn(records);
+  // Transform records
+  const transformed = transformFn(validRecords);
+  // Insert records
   return await insertRecordsByType(type, transformed);
 }
-
-// TODO: Add transformGstRecords and transformIecRecords here for GST/IEC support
