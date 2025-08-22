@@ -4,6 +4,7 @@ FROM node:20-alpine AS base
 
 # Install pnpm
 RUN npm install -g pnpm
+RUN npm add -g typescript
 
 # Set working directory
 WORKDIR /app
