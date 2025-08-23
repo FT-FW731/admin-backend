@@ -140,7 +140,7 @@ const prismaModelMap: Record<RecordType, any> = {
 
 // Mandatory fields mapping for each record type
 const mandatoryFieldsMap: Record<RecordType, string[]> = {
-  mca: ["CIN"],
+  mca: ["CIN", "DIN"],
   iec: ["IEC"],
   gst: ["GSTIN"],
 };
@@ -172,6 +172,30 @@ export async function insertRecordsByType(
 ): Promise<number> {
   const model = prismaModelMap[type];
   if (!model) throw new Error("Unsupported record type");
+
+  if (type === "mca" && records.length > 0) {
+    const pairs = records
+      .map((r) => ({ cin: r.cin, din: r.din }))
+      .filter((r) => r.cin && r.din);
+
+    // Remove duplicates
+    const uniquePairs = Array.from(
+      new Set(pairs.map((p) => `${p.cin}|${p.din}`))
+    ).map((str) => {
+      const [cin, din] = str.split("|");
+      return { cin, din };
+    });
+
+    await prisma.mcaNewLeads.deleteMany({
+      where: {
+        OR: uniquePairs.map(({ cin, din }) => ({
+          cin,
+          din,
+        })),
+      },
+    });
+  }
+
   const result = await model.createMany({
     data: records,
     skipDuplicates: true,

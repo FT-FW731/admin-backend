@@ -515,7 +515,7 @@ model McaNewLeads {
 
   // Company Details (keeping essential ones required)
   company                 String
-  cin                     String?
+  cin                     String
   cEmail                  String?   @map("company_email")
   dateOfRegistration      DateTime? @map("date_of_registration")
   roc                     String?
@@ -531,7 +531,7 @@ model McaNewLeads {
   typeCompany             String?   @map("type_company")
 
   // Director Details (keeping essential ones required)
-  din          String?   @unique
+  din          String
   directorName String?   @map("director_name")
   designation  String?
   dateOfBirth  DateTime? @map("date_of_birth")
@@ -547,6 +547,7 @@ model McaNewLeads {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([cin, din], name: "cin_din_unique")
   // Indexes for better query performance
   @@index([company])
   @@index([cin])
