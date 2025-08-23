@@ -2,6 +2,7 @@ import fs from "fs";
 import XLSX from "xlsx";
 import moment from "moment";
 import prisma from "../db/index.js";
+import { Prisma } from "@prisma/client";
 
 export const RECORD_TYPES = ["mca", "iec", "gst"] as const;
 export type RecordType = (typeof RECORD_TYPES)[number];
@@ -174,26 +175,106 @@ export async function insertRecordsByType(
   if (!model) throw new Error("Unsupported record type");
 
   if (type === "mca" && records.length > 0) {
-    const pairs = records
-      .map((r) => ({ cin: r.cin, din: r.din }))
-      .filter((r) => r.cin && r.din);
+    // Batch size to avoid too many placeholders
+    const BATCH_SIZE = 500;
+    let processed = 0;
 
-    // Remove duplicates
-    const uniquePairs = Array.from(
-      new Set(pairs.map((p) => `${p.cin}|${p.din}`))
-    ).map((str) => {
-      const [cin, din] = str.split("|");
-      return { cin, din };
-    });
+    // Columns for SQL
+    const columns = [
+      "company",
+      "cin",
+      "company_email",
+      "date_of_registration",
+      "roc",
+      "category",
+      "class",
+      "subcategory",
+      "authorized_capital",
+      "paidup_capital",
+      "activity_code",
+      "activity_description",
+      "date_join",
+      "registered_office_address",
+      "type_company",
+      "din",
+      "director_name",
+      "designation",
+      "date_of_birth",
+      "mobile",
+      "email",
+      "gender",
+      "pincode",
+      "city",
+      "state",
+      "country",
+      "created_at",
+      "updated_at",
+    ];
 
-    await prisma.mcaNewLeads.deleteMany({
-      where: {
-        OR: uniquePairs.map(({ cin, din }) => ({
-          cin,
-          din,
-        })),
-      },
-    });
+    // Helper to escape values for SQL (basic, for string only)
+    function escape(val: any) {
+      if (val === null || val === undefined) return "NULL";
+      if (val instanceof Date)
+        return `'${val.toISOString().slice(0, 19).replace("T", " ")}'`;
+      if (typeof val === "number") return val;
+      return `'${String(val).replace(/'/g, "''")}'`;
+    }
+
+    // Split into batches
+    for (let i = 0; i < records.length; i += BATCH_SIZE) {
+      const batch = records.slice(i, i + BATCH_SIZE);
+      const now = new Date();
+
+      // Prepare values for SQL
+      const values = batch.map((r) => [
+        r.company,
+        r.cin,
+        r.cEmail,
+        r.dateOfRegistration ? new Date(r.dateOfRegistration) : null,
+        r.roc,
+        r.category,
+        r.class,
+        r.subcategory,
+        r.authorizedCapital,
+        r.paidupCapital,
+        r.activityCode,
+        r.activityDescription,
+        r.dateJoin ? new Date(r.dateJoin) : null,
+        r.registeredOfficeAddress,
+        r.typeCompany,
+        r.din,
+        r.directorName,
+        r.designation,
+        r.dateOfBirth ? new Date(r.dateOfBirth) : null,
+        r.mobile,
+        r.email,
+        r.gender,
+        r.pincode,
+        r.city,
+        r.state,
+        r.country,
+        now,
+        now,
+      ]);
+
+      const updateClause = columns
+        .filter((col) => col !== "cin" && col !== "din" && col !== "created_at")
+        .map((col) => `\`${col}\`=VALUES(\`${col}\`)`)
+        .join(", ");
+
+      const sql = `
+        INSERT IGNORE INTO mca_new_leads (${columns
+          .map((c) => `\`${c}\``)
+          .join(", ")})
+        VALUES ${values.map((v) => `(${v.map(escape).join(",")})`).join(",")}
+        ON DUPLICATE KEY UPDATE ${updateClause}
+      `;
+
+      await prisma.$queryRaw(Prisma.sql([sql]));
+      processed += batch.length;
+    }
+
+    return processed;
   }
 
   const result = await model.createMany({
