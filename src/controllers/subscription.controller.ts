@@ -54,6 +54,37 @@ export const getAllSubscriptions = asyncHandler(async (req, res) => {
   });
 });
 
+export const updateSubscription = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { price, credits, description } = req.body;
+
+  const subscription = await prisma.subscription.findUnique({
+    where: { id: Number(id) },
+  });
+  if (!subscription) {
+    throw new ApiError({
+      status: StatusCodes.NOT_FOUND,
+      message: "Subscription not found",
+    });
+  }
+
+  const updatedSubscription = await prisma.subscription.update({
+    where: { id: Number(id) },
+    data: {
+      price,
+      ...(subscription?.type === "credits" && { credits }),
+      description,
+    },
+  });
+
+  new ApiResponse({
+    res,
+    status: StatusCodes.OK,
+    message: "Subscription updated successfully",
+    data: updatedSubscription,
+  });
+});
+
 export const initializeOrder = asyncHandler(async (req, res) => {
   const {
     subscriptionId,

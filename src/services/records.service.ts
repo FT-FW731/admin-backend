@@ -31,26 +31,51 @@ export async function parseRecordsFromFile(
 }
 
 // Helper function to parse date strings using moment
-function parseDate(dateStr: string | number | undefined): Date | undefined {
+function parseDate(
+  dateStr: string | number | Date | undefined
+): Date | undefined {
   if (!dateStr) return undefined;
 
-  // Handle DD/MM/YYYY format
-  if (typeof dateStr === "string" && dateStr.includes("/")) {
-    const m = moment(dateStr, "DD/MM/YYYY", true);
-    return m.isValid() ? m.toDate() : undefined;
-  }
-
-  // Handle YYYY-MM-DD format
-  if (typeof dateStr === "string" && dateStr.includes("-")) {
-    const m = moment(dateStr, "YYYY-MM-DD", true);
-    return m.isValid() ? m.toDate() : undefined;
+  // If already a Date object
+  if (dateStr instanceof Date) {
+    return isNaN(dateStr.getTime()) ? undefined : dateStr;
   }
 
   // Handle Excel date numbers
   if (typeof dateStr === "number") {
+    // If it's a plausible timestamp (milliseconds since epoch)
+    if (dateStr > 1000000000000) {
+      const d = new Date(dateStr);
+      return isNaN(d.getTime()) ? undefined : d;
+    }
     // Excel dates: days since 1899-12-30
     const m = moment("1899-12-30").add(dateStr, "days");
     return m.isValid() ? m.toDate() : undefined;
+  }
+
+  if (typeof dateStr === "string") {
+    // Handle DD/MM/YYYY
+    if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+      const m = moment(dateStr, "DD/MM/YYYY", true);
+      if (m.isValid()) return m.toDate();
+    }
+    // Handle YYYY-MM-DD
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const m = moment(dateStr, "YYYY-MM-DD", true);
+      if (m.isValid()) return m.toDate();
+    }
+    // Handle ISO format
+    if (moment(dateStr, moment.ISO_8601, true).isValid()) {
+      return moment(dateStr).toDate();
+    }
+    // Handle MM/DD/YYYY
+    if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+      const m = moment(dateStr, "MM/DD/YYYY", true);
+      if (m.isValid()) return m.toDate();
+    }
+    // Try native Date parsing as fallback
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) return d;
   }
 
   return undefined;
@@ -258,7 +283,7 @@ export async function insertRecordsByType(
       ]);
 
       const updateClause = columns
-        .filter((col) => col !== "cin" && col !== "din" && col !== "created_at")
+        .filter((col) => col !== "cin" && col !== "din")
         .map((col) => `\`${col}\`=VALUES(\`${col}\`)`)
         .join(", ");
 

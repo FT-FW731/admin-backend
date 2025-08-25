@@ -10,6 +10,7 @@ import authRoutes from "./routes/auth.routes.js";
 import recordRoutes from "./routes/records.routes.js";
 import clientRoutes from "./routes/client.routes.js";
 import subscriptionRoutes from "./routes/subscription.routes.js";
+import miscellaneousRoutes from "./routes/miscellaneous.routes.js";
 
 const app = express();
 const port = config.port;
@@ -25,6 +26,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/records", authProtect, recordRoutes);
 app.use("/api/v1/clients", authProtect, clientRoutes);
 app.use("/api/v1/subscriptions", authProtect, subscriptionRoutes);
+app.use("/api/v1/miscellaneous", authProtect, miscellaneousRoutes);
 
 /**
  * Health check endpoint

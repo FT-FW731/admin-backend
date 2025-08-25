@@ -702,6 +702,28 @@ model AdminUser {
   @@map("admin_users")
 }
 
+model Banner {
+  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  title       String   @db.VarChar(255)
+  description String   @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@unique([id])
+  @@map("banners")
+}
+
+model Dashboard {
+  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  recordName  String   @map("record_name") @db.VarChar(255)
+  recordValue Int      @map("record_value") @db.UnsignedInt
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@unique([id])
+  @@map("dashboards")
+}
+
 enum Gender {
   Male
   Female
