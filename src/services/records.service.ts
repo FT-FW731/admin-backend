@@ -3,6 +3,7 @@ import XLSX from "xlsx";
 import moment from "moment";
 import prisma from "../db/index.js";
 import { Prisma } from "@prisma/client";
+import { chunkArray } from "../utils/helpers.js";
 
 export const RECORD_TYPES = ["mca", "iec", "gst"] as const;
 export type RecordType = (typeof RECORD_TYPES)[number];
@@ -199,44 +200,15 @@ export async function insertRecordsByType(
   const model = prismaModelMap[type];
   if (!model) throw new Error("Unsupported record type");
 
-  if (type === "mca" && records.length > 0) {
-    // Batch size to avoid too many placeholders
+  // Handle raw SQL batch upsert for mca, iec and gst to update existing rows (like existing mca logic)
+  if (
+    records.length > 0 &&
+    (type === "mca" || type === "iec" || type === "gst")
+  ) {
     const BATCH_SIZE = 500;
     let processed = 0;
 
-    // Columns for SQL
-    const columns = [
-      "company",
-      "cin",
-      "company_email",
-      "date_of_registration",
-      "roc",
-      "category",
-      "class",
-      "subcategory",
-      "authorized_capital",
-      "paidup_capital",
-      "activity_code",
-      "activity_description",
-      "date_join",
-      "registered_office_address",
-      "type_company",
-      "din",
-      "director_name",
-      "designation",
-      "date_of_birth",
-      "mobile",
-      "email",
-      "gender",
-      "pincode",
-      "city",
-      "state",
-      "country",
-      "created_at",
-      "updated_at",
-    ];
-
-    // Helper to escape values for SQL (basic, for string only)
+    // Helper to escape values for SQL (basic)
     function escape(val: any) {
       if (val === null || val === undefined) return "NULL";
       if (val instanceof Date)
@@ -245,13 +217,47 @@ export async function insertRecordsByType(
       return `'${String(val).replace(/'/g, "''")}'`;
     }
 
-    // Split into batches
-    for (let i = 0; i < records.length; i += BATCH_SIZE) {
-      const batch = records.slice(i, i + BATCH_SIZE);
-      const now = new Date();
+    // Prepare columns, table name, exclude columns for update and value rows per type
+    let tableName = "";
+    let columns: string[] = [];
+    let excludeFromUpdate: string[] = [];
+    let valueRows: any[][] = [];
+    const now = new Date();
 
-      // Prepare values for SQL
-      const values = batch.map((r) => [
+    if (type === "mca") {
+      tableName = "mca_new_leads";
+      columns = [
+        "company",
+        "cin",
+        "company_email",
+        "date_of_registration",
+        "roc",
+        "category",
+        "class",
+        "subcategory",
+        "authorized_capital",
+        "paidup_capital",
+        "activity_code",
+        "activity_description",
+        "date_join",
+        "registered_office_address",
+        "type_company",
+        "din",
+        "director_name",
+        "designation",
+        "date_of_birth",
+        "mobile",
+        "email",
+        "gender",
+        "pincode",
+        "city",
+        "state",
+        "country",
+        "created_at",
+        "updated_at",
+      ];
+      excludeFromUpdate = ["cin", "din"];
+      valueRows = records.map((r) => [
         r.company,
         r.cin,
         r.cEmail,
@@ -281,27 +287,105 @@ export async function insertRecordsByType(
         now,
         now,
       ]);
+    } else if (type === "iec") {
+      tableName = "iec_leads";
+      columns = [
+        "iec_code",
+        "pan",
+        "firm_name",
+        "email",
+        "mobile",
+        "status",
+        "issue_date",
+        "file_number",
+        "dgft_ra_office",
+        "address",
+        "dob",
+        "cancelled_date",
+        "suspended_date",
+        "file_date",
+        "nature",
+        "category",
+        "pincode",
+        "created_at",
+        "updated_at",
+      ];
+      excludeFromUpdate = ["iec_code"];
+      valueRows = records.map((r) => [
+        r.iecCode,
+        r.pan ?? null,
+        r.firmName ?? null,
+        r.email ?? null,
+        r.mobile ?? null,
+        r.status ?? null,
+        r.issueDate ? new Date(r.issueDate) : null,
+        r.fileNumber ?? null,
+        r.dgftRaOffice ?? null,
+        r.address ?? null,
+        r.dob ? new Date(r.dob) : null,
+        r.cancelledDate ? new Date(r.cancelledDate) : null,
+        r.suspendedDate ? new Date(r.suspendedDate) : null,
+        r.fileDate ? new Date(r.fileDate) : null,
+        r.nature ?? null,
+        r.category ?? null,
+        r.pincode ?? null,
+        now,
+        now,
+      ]);
+    } else if (type === "gst") {
+      tableName = "gst_basics";
+      columns = [
+        "gstin",
+        "registration_date",
+        "pan",
+        "mobile",
+        "email",
+        "legal_name",
+        "trade_name",
+        "business_constitution",
+        "pincode",
+        "address",
+        "created_at",
+        "updated_at",
+      ];
+      excludeFromUpdate = ["gstin"];
+      valueRows = records.map((r) => [
+        r.gstin ?? null,
+        r.registrationDate ? new Date(r.registrationDate) : null,
+        r.pan ?? null,
+        r.mobile ?? null,
+        r.email ?? null,
+        r.legalName ?? null,
+        r.tradeName ?? null,
+        r.businessConstitution ?? null,
+        r.pincode ?? null,
+        r.address ?? null,
+        now,
+        now,
+      ]);
+    }
 
-      const updateClause = columns
-        .filter((col) => col !== "cin" && col !== "din")
-        .map((col) => `\`${col}\`=VALUES(\`${col}\`)`)
-        .join(", ");
-
+    // Chunk and execute batches
+    const chunks = chunkArray(valueRows, BATCH_SIZE);
+    for (const chunk of chunks) {
       const sql = `
-        INSERT IGNORE INTO mca_new_leads (${columns
-          .map((c) => `\`${c}\``)
-          .join(", ")})
-        VALUES ${values.map((v) => `(${v.map(escape).join(",")})`).join(",")}
-        ON DUPLICATE KEY UPDATE ${updateClause}
+        INSERT IGNORE INTO ${tableName} (${columns
+        .map((c) => `\`${c}\``)
+        .join(",")})
+        VALUES ${chunk.map((v) => `(${v.map(escape).join(",")})`).join(",")}
+        ON DUPLICATE KEY UPDATE ${columns
+          .filter((col) => !excludeFromUpdate.includes(col))
+          .map((col) => `\`${col}\`=VALUES(\`${col}\`)`)
+          .join(", ")}
       `;
-
       await prisma.$queryRaw(Prisma.sql([sql]));
-      processed += batch.length;
+      processed += chunk.length;
     }
 
     return processed;
   }
 
+  // fallback to prisma createMany for other cases
   const result = await model.createMany({
     data: records,
     skipDuplicates: true,
