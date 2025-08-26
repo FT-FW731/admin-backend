@@ -5,6 +5,45 @@ import prisma from "../db/index.js";
 import { Prisma } from "@prisma/client";
 import { chunkArray } from "../utils/helpers.js";
 
+// Helper: normalize business nature value into string[]
+function normalizeBusinessNatures(val: any): string[] {
+  // If already an array of strings
+  if (Array.isArray(val))
+    return val
+      .map(String)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+  if (typeof val !== "string") return [];
+
+  const trimmed = val.trim();
+  // JSON array string like "['Retail Business','Wholesale Business']" or '["a","b"]'
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(
+        // convert single quotes to double quotes to help parse "['a','b']"
+        trimmed.replace(/'/g, '"')
+      );
+      if (Array.isArray(parsed))
+        return parsed
+          .map(String)
+          .map((s) => s.trim())
+          .filter(Boolean);
+    } catch (e) {
+      // fallback to comma split
+    }
+  }
+  // Comma separated string
+  if (trimmed.includes(",")) {
+    return trimmed
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  // Single value
+  return trimmed ? [trimmed] : [];
+}
+
 export const RECORD_TYPES = ["mca", "iec", "gst"] as const;
 export type RecordType = (typeof RECORD_TYPES)[number];
 
@@ -146,6 +185,7 @@ export function transformGstBasicRecords(records: any[]): any[] {
     legalName: record["Legal Name"] ?? null,
     tradeName: record["Trade Name"] ?? null,
     businessConstitution: record["Business constitution"] ?? null,
+    businessNatures: normalizeBusinessNatures(record["Business Nature"]),
     pincode: record.Pincode?.toString() ?? null,
     address: record.Address ?? null,
   }));
@@ -366,8 +406,11 @@ export async function insertRecordsByType(
     }
 
     // Chunk and execute batches
-    const chunks = chunkArray(valueRows, BATCH_SIZE);
-    for (const chunk of chunks) {
+    const valueChunks = chunkArray(valueRows, BATCH_SIZE);
+    const recordChunks = chunkArray(records, BATCH_SIZE);
+    for (let i = 0; i < valueChunks.length; i++) {
+      const chunk = valueChunks[i];
+      const recordChunk = recordChunks[i] || [];
       const sql = `
         INSERT IGNORE INTO ${tableName} (${columns
         .map((c) => `\`${c}\``)
@@ -379,10 +422,65 @@ export async function insertRecordsByType(
           .join(", ")}
       `;
       await prisma.$queryRaw(Prisma.sql([sql]));
+
+      // If gst, insert associated business natures for this chunk
+      if (type === "gst") {
+        // build rows: [gstin, business_nature, created_at]
+        const businessRows: any[][] = [];
+        for (const r of recordChunk) {
+          const natures: string[] = Array.isArray(r.businessNatures)
+            ? r.businessNatures
+            : [];
+          for (const b of natures) {
+            if (r.gstin && b) businessRows.push([r.gstin, b, now]);
+          }
+        }
+        if (businessRows.length > 0) {
+          // insert in smaller batches to avoid huge queries
+          const bizChunks = chunkArray(businessRows, BATCH_SIZE);
+          for (const bizChunk of bizChunks) {
+            const bizSql = `
+              INSERT IGNORE INTO gst_business_natures (\`gstin\`, \`business_nature\`, \`created_at\`)
+              VALUES ${bizChunk
+                .map((v) => `(${v.map(escape).join(",")})`)
+                .join(",")}
+              ON DUPLICATE KEY UPDATE \`gstin\`=VALUES(\`gstin\`), \`business_nature\`=VALUES(\`business_nature\`)
+            `;
+            await prisma.$queryRaw(Prisma.sql([bizSql]));
+          }
+        }
+      }
+
       processed += chunk.length;
     }
 
     return processed;
+  }
+
+  // If gst via prisma fallback, insert business natures as well
+  if (type === "gst") {
+    const now = new Date();
+    const businessData: any[] = [];
+    for (const r of records) {
+      const natures: string[] = Array.isArray(r.businessNatures)
+        ? r.businessNatures
+        : [];
+      for (const b of natures) {
+        if (r.gstin && b)
+          businessData.push({
+            gstin: r.gstin,
+            businessNature: b,
+            createdAt: now,
+          });
+      }
+    }
+    if (businessData.length > 0) {
+      // createMany supports skipDuplicates on mysql
+      await prisma.gstBusinessNature.createMany({
+        data: businessData,
+        skipDuplicates: true,
+      });
+    }
   }
 
   // fallback to prisma createMany for other cases
