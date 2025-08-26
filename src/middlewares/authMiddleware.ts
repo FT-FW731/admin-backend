@@ -73,7 +73,24 @@ async function fetchAdminUser(userId: number): Promise<AdminUserResponseDTO> {
   }
 
   const { id, name, email, role, createdAt, updatedAt } = adminUser;
-  return { id, name, email, role, createdAt, updatedAt };
+
+  const userPerms = await prisma.adminUserPermission.findMany({
+    where: { adminUserId: userId },
+    include: { permission: true },
+  });
+
+  const permissions = (userPerms || []).map(
+    (p: any) => `${p.permission.resource}.${p.permission.action}`
+  );
+  return {
+    id,
+    name,
+    email,
+    role,
+    createdAt,
+    updatedAt,
+    permissions,
+  } as AdminUserResponseDTO;
 }
 
 /**

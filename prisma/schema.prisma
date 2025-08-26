@@ -699,7 +699,38 @@ model AdminUser {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
 
+  permissions AdminUserPermission[]
+
   @@map("admin_users")
+}
+
+model Permission {
+  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  description String?  @db.VarChar(100)
+  resource    String   @db.VarChar(100)
+  action      String   @db.VarChar(50)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  users AdminUserPermission[]
+
+  @@unique([resource, action], map: "uq_permission_resource_action")
+  @@map("permissions")
+}
+
+model AdminUserPermission {
+  id           Int      @id @default(autoincrement()) @db.UnsignedInt
+  adminUserId  Int      @db.UnsignedInt
+  permissionId Int      @db.UnsignedInt
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+
+  adminUser  AdminUser  @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([adminUserId, permissionId], map: "uq_admin_permission")
+  @@index([adminUserId], map: "idx_admin_user")
+  @@index([permissionId], map: "idx_permission")
+  @@map("admin_user_permissions")
 }
 
 model Banner {

@@ -8,15 +8,47 @@ import {
   getPortalDashboardData,
   updatePortalDashboardData,
 } from "../controllers/miscellaneous.controller.js";
+import { authorize } from "../middlewares/permissionsMiddleware.js";
+import { PERMISSIONS } from "../constants/permissions.constants.js";
 
 const router = Router();
 
-router.get("/banners", authProtect, getBanners);
-router.get("/payments", authProtect, getPayments);
-router.get("/payments/stats", authProtect, getPaymentStats);
-router.get("/dashboard", authProtect, getPortalDashboardData);
+router.get(
+  "/banners",
+  authProtect,
+  authorize(PERMISSIONS.BANNER.EDIT),
+  getBanners
+);
+router.get(
+  "/payments",
+  authProtect,
+  authorize(PERMISSIONS.PAYMENT.EDIT),
+  getPayments
+);
+router.get(
+  "/payments/stats",
+  authProtect,
+  authorize(PERMISSIONS.PAYMENT.EDIT),
+  getPaymentStats
+);
+router.get(
+  "/dashboard",
+  authProtect,
+  authorize(PERMISSIONS.DASHBOARD.EDIT),
+  getPortalDashboardData
+);
 
-router.put("/banners/:id", authProtect, updateBanner);
-router.put("/dashboard/:id", authProtect, updatePortalDashboardData);
+router.put(
+  "/banners/:id",
+  authProtect,
+  authorize(PERMISSIONS.BANNER.EDIT),
+  updateBanner
+);
+router.put(
+  "/dashboard/:id",
+  authProtect,
+  authorize(PERMISSIONS.DASHBOARD.EDIT),
+  updatePortalDashboardData
+);
 
 export default router;

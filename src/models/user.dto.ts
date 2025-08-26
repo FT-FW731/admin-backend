@@ -32,4 +32,5 @@ export interface AdminUserResponseDTO {
   role: string;
   createdAt: Date;
   updatedAt: Date;
+  permissions?: string[];
 }
