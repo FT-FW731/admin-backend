@@ -486,7 +486,7 @@ model Order {
   endDate         DateTime?         @map("end_date") @db.Date
   createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamp(0)
-  user            User              @relation(fields: [userId], references: [id])
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   subscription    Subscription      @relation(fields: [subscriptionId], references: [id])
   payment         Payment[]
   SubscribedMonth SubscribedMonth[]
@@ -504,7 +504,7 @@ model Payment {
   status            String   @default("success")
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamp(0)
   updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
-  order             Order?   @relation(fields: [razorpayOrderId], references: [razorpayOrderId])
+  order             Order?   @relation(fields: [razorpayOrderId], references: [razorpayOrderId], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([razorpayOrderId], map: "idx_payment_order_id")
   @@map("razorpay_payments")
@@ -564,8 +564,8 @@ model SubscribedMonth {
   date    DateTime
   endDate DateTime?
   type    String? // if you need to store additional info
-  user    User      @relation(fields: [userId], references: [id])
-  order   Order     @relation(fields: [orderId], references: [id])
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  order   Order     @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([userId], map: "idx_subscribed_month_user_id")
   @@index([orderId], map: "idx_subscribed_month_order_id")
