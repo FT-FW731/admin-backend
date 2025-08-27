@@ -112,6 +112,18 @@ export const getAllAdminUsers = asyncHandler(async (req, res) => {
         createdAt: true,
         updatedAt: true,
         // password: false
+        permissions: {
+          select: {
+            permission: {
+              select: {
+                id: true,
+                description: true,
+                resource: true,
+                action: true,
+              },
+            },
+          },
+        },
       },
     }),
     prisma.adminUser.count({ where }),
