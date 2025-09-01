@@ -103,8 +103,8 @@ function parseDate(
   if (typeof dateStr === "string") {
     // Handle DD/MM/YYYY or MM/DD/YYYY (try DD/MM first)
     if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-      let m = moment(dateStr, "DD/MM/YYYY", true);
-      if (!m.isValid()) m = moment(dateStr, "MM/DD/YYYY", true);
+      let m = moment(dateStr, "MM/DD/YYYY", true);
+      if (!m.isValid()) m = moment(dateStr, "DD/MM/YYYY", true);
       if (m.isValid()) return toIstDateString(m);
     }
 
