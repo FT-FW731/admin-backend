@@ -1,12 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  // output   = "../dist/generated/prisma"
 }
 
 datasource db {
@@ -212,6 +205,7 @@ model Company {
   @@index([cin], map: "idx_cin")
   @@index([companyName], map: "idx_company_name")
   @@index([companyType], map: "idx_company_type")
+  @@index([dateOfIncorporation], map: "idx_companies_date_of_incorp")
   @@map("companies")
 }
 
@@ -286,7 +280,7 @@ model Director {
   @@index([din], map: "idx_din")
   @@index([pan], map: "idx_pan")
   @@index([firstName, lastName], map: "idx_name")
-  @@index([cin], map: "cin")
+  @@index([cin], map: "idx_directors_cin")
   @@map("directors")
 }
 
@@ -753,6 +747,34 @@ model Dashboard {
 
   @@unique([id])
   @@map("dashboards")
+}
+
+model index_charges {
+  id             BigInt    @id @default(autoincrement())
+  company_id     String?   @db.VarChar(50)
+  charge_id      String?   @db.VarChar(50)
+  assets_charged String?   @db.Text
+  amount         Decimal?  @db.Decimal(18, 2)
+  currency       String?   @db.VarChar(10)
+  creation_date  DateTime? @db.Date
+  modified_date  DateTime? @db.Date
+  status         String?   @db.VarChar(50)
+  registrar_id   String?   @db.VarChar(50)
+  created_at     DateTime? @default(now()) @db.Timestamp(0)
+  updated_at     DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model PromoCode {
+  id        Int      @id @default(autoincrement()) @db.UnsignedInt
+  name      String
+  code      String   @unique
+  units     Int
+  discount  Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@unique([id])
+  @@map("promo_codes")
 }
 
 enum Gender {
