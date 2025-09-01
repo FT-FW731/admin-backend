@@ -73,49 +73,55 @@ export async function parseRecordsFromFile(
 // Helper function to parse date strings using moment
 function parseDate(
   dateStr: string | number | Date | undefined
-): Date | undefined {
+): string | undefined {
   if (!dateStr) return undefined;
 
-  // If already a Date object
-  if (dateStr instanceof Date) {
-    return isNaN(dateStr.getTime()) ? undefined : dateStr;
+  const IST_OFFSET_MIN = 330; // +5:30
+
+  // Helper to format moment as YYYY-MM-DD after converting to IST and taking day-start
+  function toIstDateString(m: moment.Moment) {
+    return m.utcOffset(IST_OFFSET_MIN).startOf("day").format("YYYY-MM-DD");
   }
 
-  // Handle Excel date numbers
+  // If already a Date object -> treat as instant, convert to IST-day and return YYYY-MM-DD
+  if (dateStr instanceof Date) {
+    if (isNaN(dateStr.getTime())) return undefined;
+    return toIstDateString(moment(dateStr));
+  }
+
+  // Handle Excel date numbers and timestamps
   if (typeof dateStr === "number") {
     // If it's a plausible timestamp (milliseconds since epoch)
     if (dateStr > 1000000000000) {
-      const d = new Date(dateStr);
-      return isNaN(d.getTime()) ? undefined : d;
+      return toIstDateString(moment.utc(dateStr));
     }
     // Excel dates: days since 1899-12-30
-    const m = moment("1899-12-30").add(dateStr, "days");
-    return m.isValid() ? m.toDate() : undefined;
+    const m = moment.utc("1899-12-30").add(dateStr, "days");
+    return m.isValid() ? toIstDateString(m) : undefined;
   }
 
   if (typeof dateStr === "string") {
-    // Handle DD/MM/YYYY
+    // Handle DD/MM/YYYY or MM/DD/YYYY (try DD/MM first)
     if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-      const m = moment(dateStr, "DD/MM/YYYY", true);
-      if (m.isValid()) return m.toDate();
+      let m = moment(dateStr, "DD/MM/YYYY", true);
+      if (!m.isValid()) m = moment(dateStr, "MM/DD/YYYY", true);
+      if (m.isValid()) return toIstDateString(m);
     }
-    // Handle YYYY-MM-DD
+
+    // Handle YYYY-MM-DD (date-only) -> interpret as that date in IST
     if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
       const m = moment(dateStr, "YYYY-MM-DD", true);
-      if (m.isValid()) return m.toDate();
+      if (m.isValid()) return toIstDateString(m);
     }
-    // Handle ISO format
+
+    // Handle ISO format (with time/zone) -> convert instant to IST then take IST day-start
     if (moment(dateStr, moment.ISO_8601, true).isValid()) {
-      return moment(dateStr).toDate();
+      return toIstDateString(moment(dateStr));
     }
-    // Handle MM/DD/YYYY
-    if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-      const m = moment(dateStr, "MM/DD/YYYY", true);
-      if (m.isValid()) return m.toDate();
-    }
+
     // Try native Date parsing as fallback
     const d = new Date(dateStr);
-    if (!isNaN(d.getTime())) return d;
+    if (!isNaN(d.getTime())) return toIstDateString(moment(d));
   }
 
   return undefined;
@@ -301,7 +307,7 @@ export async function insertRecordsByType(
         r.company,
         r.cin,
         r.cEmail,
-        r.dateOfRegistration ? new Date(r.dateOfRegistration) : null,
+        r.dateOfRegistration ?? null,
         r.roc,
         r.category,
         r.class,
@@ -310,13 +316,13 @@ export async function insertRecordsByType(
         r.paidupCapital,
         r.activityCode,
         r.activityDescription,
-        r.dateJoin ? new Date(r.dateJoin) : null,
+        r.dateJoin ?? null,
         r.registeredOfficeAddress,
         r.typeCompany,
         r.din,
         r.directorName,
         r.designation,
-        r.dateOfBirth ? new Date(r.dateOfBirth) : null,
+        r.dateOfBirth ?? null,
         r.mobile,
         r.email,
         r.gender,
@@ -358,14 +364,14 @@ export async function insertRecordsByType(
         r.email ?? null,
         r.mobile ?? null,
         r.status ?? null,
-        r.issueDate ? new Date(r.issueDate) : null,
+        r.issueDate ?? null,
         r.fileNumber ?? null,
         r.dgftRaOffice ?? null,
         r.address ?? null,
-        r.dob ? new Date(r.dob) : null,
-        r.cancelledDate ? new Date(r.cancelledDate) : null,
-        r.suspendedDate ? new Date(r.suspendedDate) : null,
-        r.fileDate ? new Date(r.fileDate) : null,
+        r.dob ?? null,
+        r.cancelledDate ?? null,
+        r.suspendedDate ?? null,
+        r.fileDate ?? null,
         r.nature ?? null,
         r.category ?? null,
         r.pincode ?? null,
@@ -391,7 +397,7 @@ export async function insertRecordsByType(
       excludeFromUpdate = ["gstin"];
       valueRows = records.map((r) => [
         r.gstin ?? null,
-        r.registrationDate ? new Date(r.registrationDate) : null,
+        r.registrationDate ?? null,
         r.pan ?? null,
         r.mobile ?? null,
         r.email ?? null,
@@ -413,8 +419,8 @@ export async function insertRecordsByType(
       const recordChunk = recordChunks[i] || [];
       const sql = `
         INSERT IGNORE INTO ${tableName} (${columns
-        .map((c) => `\`${c}\``)
-        .join(",")})
+          .map((c) => `\`${c}\``)
+          .join(",")})
         VALUES ${chunk.map((v) => `(${v.map(escape).join(",")})`).join(",")}
         ON DUPLICATE KEY UPDATE ${columns
           .filter((col) => !excludeFromUpdate.includes(col))
