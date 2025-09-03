@@ -5,8 +5,8 @@ import config from "../config/index.js";
 import { StatusCodes } from "http-status-codes";
 import ApiResponse from "../utils/apiResponse.js";
 import { ApiError } from "../middlewares/errorHandler.js";
-import { validateRequiredFields } from "../utils/helpers.js";
 import { asyncHandler } from "../middlewares/asyncHandler.js";
+import { generateApiCred, validateRequiredFields } from "../utils/helpers.js";
 
 export const createClient = asyncHandler(async (req, res) => {
   const { name, email, password, mobile, company } = req.body;
@@ -32,6 +32,8 @@ export const createClient = asyncHandler(async (req, res) => {
       password: await bcrypt.hash(password, 10),
       mobile,
       company,
+      apikey: generateApiCred(12),
+      apisecret: generateApiCred(40),
     },
   });
 
@@ -82,13 +84,13 @@ export const getAllClients = asyncHandler(async (req, res) => {
 
   const where = searchTerm
     ? {
-        OR: [
-          { name: { contains: searchTerm } },
-          { email: { contains: searchTerm } },
-          { company: { contains: searchTerm } },
-          { mobile: { contains: searchTerm } },
-        ],
-      }
+      OR: [
+        { name: { contains: searchTerm } },
+        { email: { contains: searchTerm } },
+        { company: { contains: searchTerm } },
+        { mobile: { contains: searchTerm } },
+      ],
+    }
     : {};
 
   const [usersRaw, totalCount] = await Promise.all([
@@ -155,7 +157,17 @@ export const getAllClients = asyncHandler(async (req, res) => {
 
 export const updateClients = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, email, company, mobile, password } = req.body;
+  const {
+    name,
+    email,
+    company,
+    mobile,
+    password,
+    credits,
+    designation,
+    website,
+    state,
+  } = req.body;
 
   validateRequiredFields({ id });
 
@@ -177,6 +189,17 @@ export const updateClients = asyncHandler(async (req, res) => {
   if (mobile !== undefined) updateData.mobile = mobile;
   if (password !== undefined)
     updateData.password = await bcrypt.hash(password, 10);
+
+  if (credits !== undefined) {
+    const creditsNum = Number(credits);
+    if (!Number.isNaN(creditsNum) && Number.isFinite(creditsNum)) {
+      updateData.credits = Math.max(0, Math.floor(creditsNum));
+    }
+  }
+
+  if (designation !== undefined) updateData.designation = designation;
+  if (website !== undefined) updateData.website = website;
+  if (state !== undefined) updateData.state = state;
 
   const updatedUser = await prisma.user.update({
     where: { id: parseInt(id) },

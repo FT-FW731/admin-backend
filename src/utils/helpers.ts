@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { StatusCodes } from "http-status-codes";
 import { ApiError } from "../middlewares/errorHandler.js";
 
@@ -34,4 +35,25 @@ export function chunkArray<T>(arr: T[], size: number): T[][] {
     chunks.push(arr.slice(i, i + size));
   }
   return chunks;
+}
+
+/**
+ * Generate a URL-safe alphanumeric API credential string.
+ *
+ * This creates `length` bytes of random data, encodes it as base64,
+ * strips any non-alphanumeric characters, and then truncates the
+ * result to the requested `length` characters.
+ *
+ * Notes:
+ * - If `length` is 0 or negative, an empty string will be returned.
+ * - `crypto.randomBytes` may throw for invalid sizes; callers should
+ *   ensure `length` is a non-negative integer.
+ *
+ * @param {number} length - Desired length of the credential string.
+ * @returns {string} An alphanumeric string (A-Z, a-z, 0-9) up to `length` characters.
+ * @example
+ * generateApiCred(16); // 'aZ3b9X...'
+ */
+export function generateApiCred(length: number): string {
+  return crypto.randomBytes(length).toString("base64").replace(/[^a-zA-Z0-9]/g, '').slice(0, length);
 }
