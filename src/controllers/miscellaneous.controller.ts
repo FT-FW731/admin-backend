@@ -116,15 +116,27 @@ export const getPayments = asyncHandler(async (req, res) => {
   const [payments, totalCount] = await Promise.all([
     prisma.order.findMany({
       select: {
+        id: true,
+        unit: true,
         razorpayOrderId: true,
+        values: true,
+        startDate: true,
+        endDate: true,
+        createdAt: true,
         user: {
           select: {
             name: true,
+            company: true,
           },
         },
         amount: true,
         status: true,
-        createdAt: true,
+        subscription: {
+          select: {
+            name: true,
+            price: true
+          },
+        },
       },
       skip: offset,
       take: validatedLimit,
@@ -151,23 +163,23 @@ export const getPayments = asyncHandler(async (req, res) => {
     prisma.order.count(
       search
         ? {
-            where: {
-              OR: [
-                {
-                  razorpayOrderId: {
+          where: {
+            OR: [
+              {
+                razorpayOrderId: {
+                  contains: search,
+                },
+              },
+              {
+                user: {
+                  name: {
                     contains: search,
                   },
                 },
-                {
-                  user: {
-                    name: {
-                      contains: search,
-                    },
-                  },
-                },
-              ],
-            },
-          }
+              },
+            ],
+          },
+        }
         : undefined
     ),
   ]);
@@ -187,6 +199,7 @@ export const getPayments = asyncHandler(async (req, res) => {
   const mappedPayments = payments.map((order) => ({
     ...order,
     client: order.user?.name,
+    company: order.user?.company,
     user: undefined,
   }));
 
@@ -205,10 +218,34 @@ export const getPaymentStats = asyncHandler(async (req, res) => {
   const STATUS_COMPLETED = "captured";
   const now = moment();
 
-  // Calculate start date for last 6 months window (include current month)
-  const startDate = now.clone().subtract(5, "months").startOf("month").toDate();
+  // Parse `range` query param. Supported forms:
+  //  - "6" or "6m"  => last 6 months (includes current month)
+  //  - "12m"        => last 12 months
+  //  - "1y" or "2y" => 1 year (12 months), 2 years (24 months)
+  // Default: 6 months
+  const rangeRaw = String(req.query.range ?? "6m").trim();
+  let monthsCount = 6;
+  const maxMonths = 60;
 
-  // 1) Month-wise totals for last 6 months (status = completed)
+  const m = rangeRaw.match(/^(\d+)([mMyY])?$/);
+  if (m) {
+    const num = Number(m[1]);
+    const unit = (m[2] || "m").toLowerCase();
+    monthsCount = unit === "y" ? num * 12 : num;
+  } else {
+    const maybeNum = Number(rangeRaw);
+    if (!isNaN(maybeNum) && maybeNum > 0) monthsCount = Math.floor(maybeNum);
+  }
+
+  monthsCount = Math.max(1, Math.min(monthsCount, maxMonths));
+
+  const startDate = now
+    .clone()
+    .subtract(monthsCount - 1, "months")
+    .startOf("month")
+    .toDate();
+
+  // 1) Month-wise totals for requested months (status = completed)
   const monthRows: Array<{
     year: number;
     month: number;
@@ -225,16 +262,16 @@ export const getPaymentStats = asyncHandler(async (req, res) => {
       ORDER BY year, month
     `) as any;
 
-  // Build last-6-months labels and map results using moment
+  // Build month labels for the requested window
   const months: { key: string; label: string; year: number; month: number }[] =
     [];
-  for (let i = 5; i >= 0; i--) {
-    const m = now.clone().subtract(i, "months");
-    const y = m.year();
-    const monthNum = m.month() + 1;
+  for (let i = monthsCount - 1; i >= 0; i--) {
+    const mnt = now.clone().subtract(i, "months");
+    const y = mnt.year();
+    const monthNum = mnt.month() + 1;
     const key = `${y}-${String(monthNum).padStart(2, "0")}`;
     // months.push({ key, label: m.format("YYYY-MM"), year: y, month: monthNum });
-    months.push({ key, label: m.format("MMM"), year: y, month: monthNum });
+    months.push({ key, label: mnt.format("MMM"), year: y, month: monthNum });
   }
 
   const monthMap = new Map<string, { total: number; count: number }>();
@@ -366,6 +403,7 @@ export const getPaymentStats = asyncHandler(async (req, res) => {
     data: {
       monthTotals,
       cards,
+      range: { months: monthsCount, raw: rangeRaw },
     },
   });
 });

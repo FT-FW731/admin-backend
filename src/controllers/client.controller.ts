@@ -54,6 +54,8 @@ export const createClient = asyncHandler(async (req, res) => {
 
 export const getSingleClient = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const { page = 1, limit = 10 } = req.query;
+
   validateRequiredFields({ id });
 
   const user = await prisma.user.findUnique({
@@ -67,11 +69,60 @@ export const getSingleClient = asyncHandler(async (req, res) => {
     });
   }
 
+  const validatedPage = parseInt(page as string, 10) || 1;
+  const validatedLimit = parseInt(limit as string, 10) || 10;
+
+  const paymentsWhere = { order: { userId: parseInt(id) } };
+
+  const [payments, totalCount] = await Promise.all([
+    prisma.payment.findMany({
+      where: paymentsWhere,
+      skip: (validatedPage - 1) * validatedLimit,
+      take: validatedLimit,
+      orderBy: { createdAt: "desc" },
+      include: {
+        order: {
+          select: {
+            id: true,
+            razorpayOrderId: true,
+            amount: true,
+            userId: true,
+            subscriptionId: true,
+            startDate: true,
+            endDate: true,
+          },
+        },
+      },
+    }),
+    prisma.payment.count({ where: paymentsWhere }),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / validatedLimit);
+  const hasNextPage = validatedPage < totalPages;
+  const hasPreviousPage = validatedPage > 1;
+
+  const pagination = {
+    currentPage: validatedPage,
+    totalPages,
+    totalCount,
+    limit: validatedLimit,
+    hasNextPage,
+    hasPreviousPage,
+    nextPage: hasNextPage ? validatedPage + 1 : null,
+    previousPage: hasPreviousPage ? validatedPage - 1 : null,
+  };
+
   new ApiResponse({
     res,
     status: 200,
     message: "User retrieved successfully",
-    data: user,
+    data: {
+      user,
+      payments: {
+        records: payments,
+        pagination,
+      },
+    },
   });
 });
 
