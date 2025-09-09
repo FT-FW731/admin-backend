@@ -29,25 +29,25 @@ app.use("/api/v1/auth", authRoutes);
 app.use(
   "/api/v1/records",
   authProtect,
-  authorize(PERMISSIONS.IMPORT_DATA.EDIT),
+  authorize(PERMISSIONS.IMPORT_DATA.VIEW),
   recordRoutes
 );
 app.use(
   "/api/v1/clients",
   authProtect,
-  authorize(PERMISSIONS.CLIENT.EDIT),
+  authorize(PERMISSIONS.CLIENT.VIEW),
   clientRoutes
 );
 app.use(
   "/api/v1/permissions",
   authProtect,
-  authorize(PERMISSIONS.USER_ROLES.EDIT),
+  authorize(PERMISSIONS.USER_ROLES.VIEW),
   permissionRoutes
 );
 app.use(
   "/api/v1/subscriptions",
   authProtect,
-  authorize(PERMISSIONS.SUBSCRIPTION.EDIT),
+  authorize(PERMISSIONS.SUBSCRIPTION.VIEW),
   subscriptionRoutes
 );
 app.use("/api/v1/miscellaneous", authProtect, miscellaneousRoutes);

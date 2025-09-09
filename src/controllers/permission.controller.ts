@@ -42,7 +42,7 @@ export const getAllPermissions = asyncHandler(async (req, res) => {
   const permissions = await prisma.permission.findMany({
     orderBy: { resource: "asc" },
     where: {
-      action: "edit", // only taking edit permissions for simplicity
+      action: "view", // only taking view permissions for simplicity
     },
   });
   new ApiResponse({

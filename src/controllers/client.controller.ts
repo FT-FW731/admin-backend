@@ -90,6 +90,9 @@ export const getSingleClient = asyncHandler(async (req, res) => {
             subscriptionId: true,
             startDate: true,
             endDate: true,
+            subscription: {
+              select: { id: true, name: true },
+            },
           },
         },
       },
@@ -135,13 +138,13 @@ export const getAllClients = asyncHandler(async (req, res) => {
 
   const where = searchTerm
     ? {
-      OR: [
-        { name: { contains: searchTerm } },
-        { email: { contains: searchTerm } },
-        { company: { contains: searchTerm } },
-        { mobile: { contains: searchTerm } },
-      ],
-    }
+        OR: [
+          { name: { contains: searchTerm } },
+          { email: { contains: searchTerm } },
+          { company: { contains: searchTerm } },
+          { mobile: { contains: searchTerm } },
+        ],
+      }
     : {};
 
   const [usersRaw, totalCount] = await Promise.all([

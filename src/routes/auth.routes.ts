@@ -19,20 +19,20 @@ router.get("/me", authProtect, getAdminUser);
 router.get(
   "/users",
   authProtect,
-  authorize(PERMISSIONS.USER_ROLES.EDIT),
+  authorize(PERMISSIONS.USER_ROLES.VIEW),
   getAllAdminUsers
 );
 
 router.put(
   "/users/:id",
   authProtect,
-  authorize(PERMISSIONS.USER_ROLES.EDIT),
+  authorize(PERMISSIONS.USER_ROLES.VIEW),
   updateAdminUser
 );
 router.delete(
   "/users/:id",
   authProtect,
-  authorize(PERMISSIONS.USER_ROLES.EDIT),
+  authorize(PERMISSIONS.USER_ROLES.VIEW),
   deleteAdminUser
 );
 

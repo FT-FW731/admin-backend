@@ -16,38 +16,38 @@ const router = Router();
 router.get(
   "/banners",
   authProtect,
-  authorize(PERMISSIONS.BANNER.EDIT),
+  authorize(PERMISSIONS.BANNER.VIEW),
   getBanners
 );
 router.get(
   "/payments",
   authProtect,
-  authorize(PERMISSIONS.PAYMENT.EDIT),
+  authorize(PERMISSIONS.PAYMENT.VIEW),
   getPayments
 );
 router.get(
   "/payments/stats",
   authProtect,
-  authorize(PERMISSIONS.PAYMENT.EDIT),
+  authorize(PERMISSIONS.PAYMENT.VIEW),
   getPaymentStats
 );
 router.get(
   "/dashboard",
   authProtect,
-  authorize(PERMISSIONS.DASHBOARD.EDIT),
+  authorize(PERMISSIONS.DASHBOARD.VIEW),
   getPortalDashboardData
 );
 
 router.put(
   "/banners/:id",
   authProtect,
-  authorize(PERMISSIONS.BANNER.EDIT),
+  authorize(PERMISSIONS.BANNER.VIEW),
   updateBanner
 );
 router.put(
   "/dashboard/:id",
   authProtect,
-  authorize(PERMISSIONS.DASHBOARD.EDIT),
+  authorize(PERMISSIONS.DASHBOARD.VIEW),
   updatePortalDashboardData
 );
 
