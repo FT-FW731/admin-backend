@@ -107,11 +107,21 @@ export const getPayments = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit as string) || 10;
   const sortBy = (req.query.sortBy as string) || "createdAt";
   const sortOrder = (req.query.sortOrder as string) || "desc";
+  const status = (req.query.status as string) || "";
   const search = (req.query.search as string) || "";
 
   const validatedPage = Math.max(1, page);
   const validatedLimit = Math.min(Math.max(1, limit));
   const offset = (validatedPage - 1) * validatedLimit;
+
+  const where: any = {};
+  if (status) where.status = status;
+  if (search) {
+    where.OR = [
+      { razorpayOrderId: { contains: search } },
+      { user: { name: { contains: search } } },
+    ];
+  }
 
   const [payments, totalCount] = await Promise.all([
     prisma.order.findMany({
@@ -134,7 +144,7 @@ export const getPayments = asyncHandler(async (req, res) => {
         subscription: {
           select: {
             name: true,
-            price: true
+            price: true,
           },
         },
       },
@@ -143,45 +153,10 @@ export const getPayments = asyncHandler(async (req, res) => {
       orderBy: {
         [sortBy]: sortOrder,
       },
-      where: {
-        OR: [
-          {
-            razorpayOrderId: {
-              contains: search,
-            },
-          },
-          {
-            user: {
-              name: {
-                contains: search,
-              },
-            },
-          },
-        ],
-      },
+      where: Object.keys(where).length ? where : undefined,
     }),
-    prisma.order.count(
-      search
-        ? {
-          where: {
-            OR: [
-              {
-                razorpayOrderId: {
-                  contains: search,
-                },
-              },
-              {
-                user: {
-                  name: {
-                    contains: search,
-                  },
-                },
-              },
-            ],
-          },
-        }
-        : undefined
-    ),
+
+    prisma.order.count(Object.keys(where).length ? { where } : undefined),
   ]);
 
   const totalPages = Math.ceil(totalCount / validatedLimit);

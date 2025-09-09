@@ -60,10 +60,10 @@ export async function parseRecordsFromFile(
     const sheet = workbook.Sheets[sheetName];
     records = XLSX.utils.sheet_to_json(sheet);
   } else if (ext === "csv") {
-    const fileContent = fs.readFileSync(file.path, "utf8");
-    // TODO: Add CSV parsing logic here if needed
-    // For now, just return empty array
-    records = [];
+    const workbook = XLSX.read(file.buffer, { type: "buffer" });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    records = XLSX.utils.sheet_to_json(sheet);
   } else {
     throw new Error("Unsupported file type");
   }
@@ -419,8 +419,8 @@ export async function insertRecordsByType(
       const recordChunk = recordChunks[i] || [];
       const sql = `
         INSERT IGNORE INTO ${tableName} (${columns
-          .map((c) => `\`${c}\``)
-          .join(",")})
+        .map((c) => `\`${c}\``)
+        .join(",")})
         VALUES ${chunk.map((v) => `(${v.map(escape).join(",")})`).join(",")}
         ON DUPLICATE KEY UPDATE ${columns
           .filter((col) => !excludeFromUpdate.includes(col))
