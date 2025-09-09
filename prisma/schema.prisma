@@ -669,6 +669,10 @@ model DinDataContact {
   voteridCrd         String?
   pMobile            String?
 
+  @@index([id], map: "idx_din")
+  @@index([pan], map: "idx_pan")
+  @@index([createdAt], map: "idx_created_at")
+  @@index([firstName], map: "idx_first_name")
   @@map("din_data_contact")
 }
 
