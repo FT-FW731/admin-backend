@@ -31,6 +31,10 @@ export const PERMISSIONS = {
     VIEW: "import_data.view",
     EDIT: "import_data.edit",
   },
+  PROMO_CODE: {
+    VIEW: "promo_code.view",
+    EDIT: "promo_code.edit",
+  },
 };
 
 export type PermissionString =
@@ -49,4 +53,6 @@ export type PermissionString =
   | (typeof PERMISSIONS)["USER_ROLES"]["VIEW"]
   | (typeof PERMISSIONS)["USER_ROLES"]["EDIT"]
   | (typeof PERMISSIONS)["IMPORT_DATA"]["VIEW"]
-  | (typeof PERMISSIONS)["IMPORT_DATA"]["EDIT"];
+  | (typeof PERMISSIONS)["IMPORT_DATA"]["EDIT"]
+  | (typeof PERMISSIONS)["PROMO_CODE"]["VIEW"]
+  | (typeof PERMISSIONS)["PROMO_CODE"]["EDIT"];

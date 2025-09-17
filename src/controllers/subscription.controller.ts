@@ -164,3 +164,86 @@ export const initializeOrder = asyncHandler(async (req, res) => {
     data: orderRecord,
   });
 });
+
+export const getAllPromoCodes = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10, search = "" } = req.query;
+
+  const validatedPage = parseInt(page as string, 10) || 1;
+  const validatedLimit = parseInt(limit as string, 10) || 10;
+  const searchTerm = (search as string).trim();
+
+  const where = searchTerm
+    ? {
+      OR: [
+        { name: { contains: searchTerm, mode: "insensitive" } },
+        { code: { contains: searchTerm, mode: "insensitive" } },
+      ],
+    }
+    : {};
+
+  const [promoCodes, totalCount] = await Promise.all([
+    prisma.promoCode.findMany({
+      where,
+      skip: (validatedPage - 1) * validatedLimit,
+      take: validatedLimit,
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.promoCode.count({ where }),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / validatedLimit) || 0;
+  const hasNextPage = validatedPage < totalPages;
+  const hasPreviousPage = validatedPage > 1;
+
+  const pagination = {
+    currentPage: validatedPage,
+    totalPages,
+    totalCount,
+    limit: validatedLimit,
+    hasNextPage,
+    hasPreviousPage,
+    nextPage: hasNextPage ? validatedPage + 1 : null,
+    previousPage: hasPreviousPage ? validatedPage - 1 : null,
+  };
+
+  new ApiResponse({
+    res,
+    status: StatusCodes.OK,
+    message: "Fetched promo codes",
+    data: {
+      records: promoCodes,
+      pagination,
+    },
+  });
+});
+
+export const addPromoCode = asyncHandler(async (req, res) => {
+  const { name, code, discount, units } = req.body;
+  validateRequiredFields({ name, code, discount, units });
+
+  const existingPromo = await prisma.promoCode.findUnique({
+    where: { code },
+  });
+  if (existingPromo) {
+    throw new ApiError({
+      status: StatusCodes.BAD_REQUEST,
+      message: "Promo code already exists",
+    });
+  }
+
+  const promoCode = await prisma.promoCode.create({
+    data: {
+      name,
+      code,
+      discount,
+      units,
+    },
+  });
+
+  new ApiResponse({
+    res,
+    status: StatusCodes.CREATED,
+    message: "Promo code created successfully",
+    data: promoCode,
+  });
+});
