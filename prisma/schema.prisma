@@ -28,6 +28,7 @@ model User {
   SubscribedMonth   SubscribedMonth[]
   PurchasedContacts PurchasedContacts[]
   SubUser           SubUser[]
+  LoginHistory      LoginHistory[]
 
   @@map("users")
 }
@@ -42,6 +43,21 @@ model Otp {
 
   @@index([email], map: "idx_email")
   @@map("otp_records")
+}
+
+model LoginHistory {
+  id        Int       @id @default(autoincrement()) @map("id") @db.UnsignedInt
+  userId    Int?      @map("user_id") @db.UnsignedInt
+  subUserId Int?      @map("sub_user_id") @db.UnsignedInt
+  loginAt   DateTime  @default(now()) @map("login_at") @db.Timestamp(0)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subUser   SubUser?  @relation(fields: [subUserId], references: [id], onDelete: Cascade)
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([userId], map: "idx_login_history_user_id")
+  @@index([subUserId], map: "idx_login_history_sub_user_id")
+  @@map("login_history")
 }
 
 model IecLead {
@@ -677,15 +693,16 @@ model DinDataContact {
 }
 
 model SubUser {
-  id          Int      @id @default(autoincrement()) @db.UnsignedInt
-  userId      Int      @db.UnsignedInt
-  user        User     @relation(fields: [userId], references: [id])
-  name        String
-  email       String   @unique
-  password    String
-  accessLevel Json?
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(0)
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  id           Int            @id @default(autoincrement()) @db.UnsignedInt
+  userId       Int            @db.UnsignedInt
+  user         User           @relation(fields: [userId], references: [id])
+  name         String
+  email        String         @unique
+  password     String
+  accessLevel  Json?
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+  LoginHistory LoginHistory[]
 }
 
 model AdminUser {

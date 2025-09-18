@@ -1,3 +1,4 @@
+import moment from "moment";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import prisma from "../db/index.js";
@@ -138,13 +139,13 @@ export const getAllClients = asyncHandler(async (req, res) => {
 
   const where = searchTerm
     ? {
-        OR: [
-          { name: { contains: searchTerm } },
-          { email: { contains: searchTerm } },
-          { company: { contains: searchTerm } },
-          { mobile: { contains: searchTerm } },
-        ],
-      }
+      OR: [
+        { name: { contains: searchTerm } },
+        { email: { contains: searchTerm } },
+        { company: { contains: searchTerm } },
+        { mobile: { contains: searchTerm } },
+      ],
+    }
     : {};
 
   const [usersRaw, totalCount] = await Promise.all([
@@ -292,5 +293,98 @@ export const deleteClients = asyncHandler(async (req, res) => {
     res,
     status: 200,
     message: "User deleted successfully",
+  });
+});
+
+export const getClientsLoginHistory = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page as string, 10) || 1;
+  const limit = parseInt(req.query.limit as string, 10) || 10;
+  const sortBy = (req.query.sortBy as string) || "loginAt";
+  const sortOrder = (req.query.sortOrder as string) || "desc";
+  const search = (req.query.search as string || "").trim();
+
+  const offset = (page - 1) * limit;
+
+  const where: any = {};
+  if (search) {
+    where.OR = [
+      { user: { name: { startsWith: search } } },
+      { subUser: { name: { startsWith: search } } }
+    ];
+  }
+
+  const orderBy: any = {};
+  orderBy[sortBy] = sortOrder;
+
+  const [userLogins, totalCount] = await Promise.all([
+    prisma.loginHistory.findMany({
+      select: {
+        id: true,
+        loginAt: true,
+        user: { select: { name: true, email: true } },
+        subUser: { select: { name: true, email: true } }
+      },
+      skip: offset,
+      take: limit,
+      orderBy,
+      where: Object.keys(where).length ? where : undefined,
+    }),
+    prisma.loginHistory.count({
+      where: Object.keys(where).length ? where : undefined,
+    })
+  ]);
+  const totalPages = Math.ceil(totalCount / limit);
+
+  const formattedLogins: Array<{ id: number; name: string; email: string, role: string; loginAt: Date }> = userLogins.map(login => ({
+    id: login.id,
+    name: login.user ? login.user.name : (login.subUser ? login.subUser.name : '-'),
+    email: login.user ? login.user.email : (login.subUser ? login.subUser.email : '-'),
+    role: login.user ? 'User' : (login.subUser ? 'SubUser' : '-'),
+    loginAt: login.loginAt,
+  }));
+
+  // Card data calculations
+  const last24Hours = moment().subtract(24, 'hours').toDate();
+  const totalLoginsLast24Hours = await prisma.loginHistory.count({
+    where: {
+      loginAt: { gte: last24Hours }
+    }
+  });
+
+  const uniqueUserIds = await prisma.loginHistory.findMany({
+    select: { userId: true, subUserId: true }
+  });
+  const userSet = new Set<number>();
+  const subUserSet = new Set<number>();
+  uniqueUserIds.forEach(({ userId, subUserId }) => {
+    if (userId) userSet.add(userId);
+    if (subUserId) subUserSet.add(subUserId);
+  });
+  const uniqueUsers = userSet.size + subUserSet.size;
+
+  new ApiResponse({
+    res,
+    status: StatusCodes.OK,
+    message: "Login history retrieved successfully",
+    data: {
+      logins: formattedLogins,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        limit,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+        nextPage: page < totalPages ? page + 1 : null,
+        previousPage: page > 1 ? page - 1 : null,
+      },
+      cards: {
+        totalLogins: totalLoginsLast24Hours,
+        totalUsers: userSet.size,
+        totalSubUsers: subUserSet.size,
+        totalClients: userSet.size + subUserSet.size,
+        uniqueUsers
+      }
+    }
   });
 });
